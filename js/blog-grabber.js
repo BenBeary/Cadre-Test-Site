@@ -40,11 +40,12 @@ async function fetchBlogData() {
     return response.json();
 }
 
-function decorate(posts) {
+function decorate(posts, type) {
     return (posts || []).map(post => ({
         ...post,
         _date: parseBlogDate(post.date),
-        _endDate: post.end_date ? parseBlogDate(post.end_date) : null
+        _endDate: post.end_date ? parseBlogDate(post.end_date) : null,
+        _type: type
     }));
 }
 
@@ -144,7 +145,7 @@ async function populateHomePreview(limit = 3) {
         const key = column.dataset.blogPreview;
         const list = column.querySelector('.news-list');
         if (!list) return;
-        const posts = sortNewestFirst(decorate(data[key])).slice(0, limit);
+        const posts = sortNewestFirst(decorate(data[key], key)).slice(0, limit);
         list.innerHTML = '';
         posts.forEach(post => list.appendChild(renderMiniCard(post, root)));
     });
@@ -158,15 +159,20 @@ function getPageSize(desktopSize, mobileSize) {
     return window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`).matches ? mobileSize : desktopSize;
 }
 
-function initListingSection({ posts, gridEl, searchEl, paginationEl, pageSize = 6, mobilePageSize = 3 }) {
+function initListingSection({ posts, gridEl, searchEl, filterEl, paginationEl, pageSize = 9, mobilePageSize = null }) {
     const root = getRoot();
     const sorted = sortNewestFirst(posts);
     let currentPage = 1;
     let query = '';
-    let activePageSize = getPageSize(pageSize, mobilePageSize);
+    let typeFilter = 'all';
+    const effectiveMobile = mobilePageSize ?? pageSize;
+    let activePageSize = getPageSize(pageSize, effectiveMobile);
 
     function getFiltered() {
-        return sorted.filter(p => matchesQuery(p, query));
+        return sorted.filter(p => {
+            if (typeFilter !== 'all' && p._type !== typeFilter) return false;
+            return matchesQuery(p, query);
+        });
     }
 
     function renderGrid() {
@@ -244,8 +250,23 @@ function initListingSection({ posts, gridEl, searchEl, paginationEl, pageSize = 
         });
     }
 
+    if (filterEl) {
+        filterEl.addEventListener('click', e => {
+            const btn = e.target.closest('[data-filter]');
+            if (!btn) return;
+            typeFilter = btn.dataset.filter;
+            filterEl.querySelectorAll('[data-filter]').forEach(b => {
+                const active = b === btn;
+                b.classList.toggle('is-active', active);
+                b.setAttribute('aria-selected', active ? 'true' : 'false');
+            });
+            currentPage = 1;
+            renderGrid();
+        });
+    }
+
     window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`).addEventListener('change', () => {
-        const nextSize = getPageSize(pageSize, mobilePageSize);
+        const nextSize = getPageSize(pageSize, effectiveMobile);
         if (nextSize === activePageSize) return;
         activePageSize = nextSize;
         currentPage = 1;
@@ -263,12 +284,22 @@ async function populateListingPage() {
 
     sections.forEach(section => {
         const key = section.dataset.blogSection;
-        const posts = decorate(data[key]);
+        const posts = key === 'combined'
+            ? [...decorate(data.announcements, 'announcements'), ...decorate(data.events, 'events')]
+            : decorate(data[key], key);
         const gridEl = section.querySelector('.news-grid');
         const searchEl = section.querySelector('.news-search input');
+        const filterEl = section.querySelector('.news-filter');
         const paginationEl = section.querySelector('.news-pagination');
         if (!gridEl || !paginationEl) return;
-        initListingSection({ posts, gridEl, searchEl, paginationEl, pageSize: 6 });
+        initListingSection({
+            posts,
+            gridEl,
+            searchEl,
+            filterEl,
+            paginationEl,
+            pageSize: key === 'combined' ? 9 : 6
+        });
     });
 
     document.dispatchEvent(new CustomEvent('blog:loaded'));

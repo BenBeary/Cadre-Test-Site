@@ -22,31 +22,23 @@
     <div id="site-header"></div>
 
     <main>
-        <section class="news-section" data-blog-section="announcements">
+        <section class="news-section" data-blog-section="combined">
             <div class="news-inner">
                 <div class="news-header">
-                    <h2 class="news-title">Announcements</h2>
+                    <h2 class="news-title">Announcements &amp; Events</h2>
                 </div>
-                <div class="news-search">
-                    <input type="search" placeholder="Search announcements by title or date" aria-label="Search announcements">
+                <div class="news-controls">
+                    <div class="news-search">
+                        <input type="search" placeholder="Search by title or date" aria-label="Search announcements and events">
+                    </div>
+                    <div class="news-filter" role="tablist" aria-label="Filter by type">
+                        <button type="button" class="news-filter-btn is-active" data-filter="all" role="tab" aria-selected="true">All</button>
+                        <button type="button" class="news-filter-btn" data-filter="announcements" role="tab" aria-selected="false">News</button>
+                        <button type="button" class="news-filter-btn" data-filter="events" role="tab" aria-selected="false">Events</button>
+                    </div>
                 </div>
-                <div class="news-grid"></div>
-                <div class="news-pagination" role="navigation" aria-label="Announcements pagination"></div>
-            </div>
-        </section>
-
-        <hr class="section-divider">
-
-        <section class="news-section" data-blog-section="events">
-            <div class="news-inner">
-                <div class="news-header">
-                    <h2 class="news-title">Events</h2>
-                </div>
-                <div class="news-search">
-                    <input type="search" placeholder="Search events by title or date" aria-label="Search events">
-                </div>
-                <div class="news-grid"></div>
-                <div class="news-pagination" role="navigation" aria-label="Events pagination"></div>
+                <div class="news-grid news-grid-3x3"></div>
+                <div class="news-pagination" role="navigation" aria-label="Pagination"></div>
             </div>
         </section>
     </main>

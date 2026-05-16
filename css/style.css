@@ -595,6 +595,11 @@ h1 {
     min-height: calc(2 * ((var(--max-width) / 3 - 2 * var(--space-3)) * 9 / 16 + 3.5rem) + var(--space-3));
 }
 
+.news-grid-3x3 {
+    grid-template-rows: repeat(3, 1fr);
+    min-height: calc(3 * ((var(--max-width) / 3 - 2 * var(--space-3)) * 9 / 16 + 3.5rem) + 2 * var(--space-3));
+}
+
 .news-grid .news-card {
     scroll-snap-align: none;
 }
@@ -612,6 +617,9 @@ h1 {
     .news-grid {
         grid-template-columns: repeat(2, 1fr);
     }
+    .news-grid-3x3 {
+        grid-template-columns: repeat(3, 1fr);
+    }
 }
 
 @media (max-width: 520px) {
@@ -619,6 +627,66 @@ h1 {
         grid-template-columns: 1fr;
         min-height: auto;
     }
+    .news-grid-3x3 {
+        grid-template-columns: repeat(3, 1fr);
+        gap: var(--space-1);
+        min-height: auto;
+    }
+    .news-grid-3x3 .news-card-title {
+        font-size: 0.8rem;
+        padding: var(--space-1);
+    }
+    .news-grid-3x3 .news-card-date {
+        font-size: 0.7rem;
+        padding: 0.1rem 0.35rem;
+    }
+}
+
+/* Listing controls (search + filter row) */
+.news-controls {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-bottom: var(--space-2);
+    flex-wrap: wrap;
+}
+
+.news-controls .news-search {
+    flex: 1;
+    min-width: 240px;
+    margin-bottom: 0;
+}
+
+.news-filter {
+    display: inline-flex;
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    overflow: hidden;
+}
+
+.news-filter-btn {
+    background: transparent;
+    border: none;
+    color: var(--color-fg);
+    font: inherit;
+    font-weight: 600;
+    padding: 0.5rem var(--space-2);
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.news-filter-btn + .news-filter-btn {
+    border-left: 1px solid var(--color-border);
+}
+
+.news-filter-btn:hover:not(.is-active) {
+    color: var(--color-complimentary);
+}
+
+.news-filter-btn.is-active {
+    background-color: var(--color-primary);
+    color: #fff;
 }
 
 /* Search bar */
