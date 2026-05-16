@@ -1,0 +1,280 @@
+const BLOG_DATA_PATH = 'json/blog-data.json';
+
+function getRoot() {
+    return document.body.dataset.root || '';
+}
+
+function parseBlogDate(str) {
+    const [month, day, year] = str.split('-').map(Number);
+    return new Date(year, month - 1, day);
+}
+
+const SHORT_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const LONG_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+function formatCardDate(date) {
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${SHORT_MONTHS[date.getMonth()]} ${day}`;
+}
+
+function formatCardDateRange(start, end) {
+    if (!end || end.getTime() === start.getTime()) return formatCardDate(start);
+
+    const sameYear = start.getFullYear() === end.getFullYear();
+    const sameMonth = sameYear && start.getMonth() === end.getMonth();
+    const startDay = String(start.getDate()).padStart(2, '0');
+    const endDay = String(end.getDate()).padStart(2, '0');
+
+    if (sameMonth) {
+        return `${SHORT_MONTHS[start.getMonth()]} ${startDay} – ${endDay}`;
+    }
+    if (sameYear) {
+        return `${SHORT_MONTHS[start.getMonth()]} ${startDay} – ${SHORT_MONTHS[end.getMonth()]} ${endDay}`;
+    }
+    return `${SHORT_MONTHS[start.getMonth()]} ${startDay}, ${start.getFullYear()} – ${SHORT_MONTHS[end.getMonth()]} ${endDay}, ${end.getFullYear()}`;
+}
+
+async function fetchBlogData() {
+    const response = await fetch(`${getRoot()}${BLOG_DATA_PATH}`);
+    if (!response.ok) throw new Error(`Failed to load blog data: ${response.status}`);
+    return response.json();
+}
+
+function decorate(posts) {
+    return (posts || []).map(post => ({
+        ...post,
+        _date: parseBlogDate(post.date),
+        _endDate: post.end_date ? parseBlogDate(post.end_date) : null
+    }));
+}
+
+function sortNewestFirst(posts) {
+    return [...posts].sort((a, b) => b._date - a._date);
+}
+
+function renderNewsCard(post, root) {
+    const card = document.createElement('a');
+    card.href = `${root}${post.href}`;
+    card.className = 'news-card';
+
+    const image = document.createElement('div');
+    image.className = 'news-card-image';
+
+    const img = document.createElement('img');
+    img.src = `${root}${post.thumbnail}`;
+    img.alt = '';
+    image.appendChild(img);
+
+    const dateLabel = document.createElement('span');
+    dateLabel.className = 'news-card-date';
+    dateLabel.textContent = formatCardDateRange(post._date, post._endDate);
+    image.appendChild(dateLabel);
+
+    const title = document.createElement('h3');
+    title.className = 'news-card-title';
+    title.textContent = post.title;
+
+    card.appendChild(image);
+    card.appendChild(title);
+    return card;
+}
+
+function dateSearchTokens(d) {
+    return [
+        formatCardDate(d),
+        `${SHORT_MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`,
+        `${LONG_MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`,
+        String(d.getFullYear())
+    ];
+}
+
+function matchesQuery(post, query) {
+    if (!query) return true;
+    const q = query.trim().toLowerCase();
+    if (!q) return true;
+
+    const tokens = [post.title, post.date, ...dateSearchTokens(post._date)];
+    if (post._endDate) {
+        tokens.push(post.end_date, ...dateSearchTokens(post._endDate));
+        tokens.push(formatCardDateRange(post._date, post._endDate));
+    }
+
+    return tokens.join(' ').toLowerCase().includes(q);
+}
+
+function renderMiniCard(post, root) {
+    const card = document.createElement('a');
+    card.href = `${root}${post.href}`;
+    card.className = 'news-mini-card';
+
+    const thumb = document.createElement('div');
+    thumb.className = 'news-mini-card-thumb';
+    const img = document.createElement('img');
+    img.src = `${root}${post.thumbnail}`;
+    img.alt = '';
+    thumb.appendChild(img);
+
+    const body = document.createElement('div');
+    body.className = 'news-mini-card-body';
+
+    const dateLine = document.createElement('div');
+    dateLine.className = 'news-mini-card-date';
+    dateLine.textContent = formatCardDateRange(post._date, post._endDate);
+
+    const title = document.createElement('h3');
+    title.className = 'news-mini-card-title';
+    title.textContent = post.title;
+
+    body.appendChild(dateLine);
+    body.appendChild(title);
+
+    card.appendChild(thumb);
+    card.appendChild(body);
+    return card;
+}
+
+async function populateHomePreview(limit = 3) {
+    const columns = document.querySelectorAll('[data-blog-preview]');
+    if (columns.length === 0) return;
+
+    const data = await fetchBlogData();
+    const root = getRoot();
+
+    columns.forEach(column => {
+        const key = column.dataset.blogPreview;
+        const list = column.querySelector('.news-list');
+        if (!list) return;
+        const posts = sortNewestFirst(decorate(data[key])).slice(0, limit);
+        list.innerHTML = '';
+        posts.forEach(post => list.appendChild(renderMiniCard(post, root)));
+    });
+
+    document.dispatchEvent(new CustomEvent('blog:loaded'));
+}
+
+const MOBILE_BREAKPOINT = 520;
+
+function getPageSize(desktopSize, mobileSize) {
+    return window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`).matches ? mobileSize : desktopSize;
+}
+
+function initListingSection({ posts, gridEl, searchEl, paginationEl, pageSize = 6, mobilePageSize = 3 }) {
+    const root = getRoot();
+    const sorted = sortNewestFirst(posts);
+    let currentPage = 1;
+    let query = '';
+    let activePageSize = getPageSize(pageSize, mobilePageSize);
+
+    function getFiltered() {
+        return sorted.filter(p => matchesQuery(p, query));
+    }
+
+    function renderGrid() {
+        gridEl.innerHTML = '';
+        const filtered = getFiltered();
+        const totalPages = Math.max(1, Math.ceil(filtered.length / activePageSize));
+        if (currentPage > totalPages) currentPage = totalPages;
+
+        const start = (currentPage - 1) * activePageSize;
+        const pageItems = filtered.slice(start, start + activePageSize);
+
+        if (pageItems.length === 0) {
+            const empty = document.createElement('p');
+            empty.className = 'news-grid-empty';
+            empty.textContent = 'No matching posts.';
+            gridEl.appendChild(empty);
+        } else {
+            pageItems.forEach(post => gridEl.appendChild(renderNewsCard(post, root)));
+        }
+
+        renderPagination(totalPages);
+    }
+
+    function renderPagination(totalPages) {
+        paginationEl.innerHTML = '';
+        if (totalPages <= 1) return;
+
+        const makeBtn = (label, page, opts = {}) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'news-page-btn';
+            btn.textContent = label;
+            if (opts.active) btn.classList.add('is-active');
+            if (opts.disabled) btn.disabled = true;
+            btn.addEventListener('click', () => {
+                currentPage = page;
+                renderGrid();
+            });
+            return btn;
+        };
+
+        const makeEllipsis = () => {
+            const span = document.createElement('span');
+            span.className = 'news-page-ellipsis';
+            span.textContent = '…';
+            return span;
+        };
+
+        const maxNumbers = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`).matches ? 4 : 5;
+        let start = Math.max(1, currentPage - Math.floor(maxNumbers / 2));
+        let end = start + maxNumbers - 1;
+        if (end > totalPages) {
+            end = totalPages;
+            start = Math.max(1, end - maxNumbers + 1);
+        }
+
+        paginationEl.appendChild(makeBtn('«', 1, { disabled: currentPage === 1 }));
+        paginationEl.appendChild(makeBtn('‹', currentPage - 1, { disabled: currentPage === 1 }));
+
+        if (start > 1) paginationEl.appendChild(makeEllipsis());
+        for (let i = start; i <= end; i++) {
+            paginationEl.appendChild(makeBtn(String(i), i, { active: i === currentPage }));
+        }
+        if (end < totalPages) paginationEl.appendChild(makeEllipsis());
+
+        paginationEl.appendChild(makeBtn('›', currentPage + 1, { disabled: currentPage === totalPages }));
+        paginationEl.appendChild(makeBtn('»', totalPages, { disabled: currentPage === totalPages }));
+    }
+
+    if (searchEl) {
+        searchEl.addEventListener('input', () => {
+            query = searchEl.value;
+            currentPage = 1;
+            renderGrid();
+        });
+    }
+
+    window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`).addEventListener('change', () => {
+        const nextSize = getPageSize(pageSize, mobilePageSize);
+        if (nextSize === activePageSize) return;
+        activePageSize = nextSize;
+        currentPage = 1;
+        renderGrid();
+    });
+
+    renderGrid();
+}
+
+async function populateListingPage() {
+    const sections = document.querySelectorAll('[data-blog-section]');
+    if (sections.length === 0) return;
+
+    const data = await fetchBlogData();
+
+    sections.forEach(section => {
+        const key = section.dataset.blogSection;
+        const posts = decorate(data[key]);
+        const gridEl = section.querySelector('.news-grid');
+        const searchEl = section.querySelector('.news-search input');
+        const paginationEl = section.querySelector('.news-pagination');
+        if (!gridEl || !paginationEl) return;
+        initListingSection({ posts, gridEl, searchEl, paginationEl, pageSize: 6 });
+    });
+
+    document.dispatchEvent(new CustomEvent('blog:loaded'));
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    populateHomePreview().catch(err => console.error('[blog-grabber]', err));
+    populateListingPage().catch(err => console.error('[blog-grabber]', err));
+});

@@ -46,25 +46,4 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    document.querySelectorAll('.news-slider').forEach(slider => {
-        const row = slider.querySelector('.news-row');
-        const prev = slider.querySelector('.news-arrow-prev');
-        const next = slider.querySelector('.news-arrow-next');
-        if (!row || !prev || !next) return;
-
-        const updateArrows = () => {
-            const max = row.scrollWidth - row.clientWidth;
-            prev.hidden = row.scrollLeft <= 1;
-            next.hidden = row.scrollLeft >= max - 1;
-        };
-
-        const step = () => row.clientWidth * 0.8;
-
-        prev.addEventListener('click', () => row.scrollBy({ left: -step(), behavior: 'smooth' }));
-        next.addEventListener('click', () => row.scrollBy({ left: step(), behavior: 'smooth' }));
-
-        row.addEventListener('scroll', updateArrows, { passive: true });
-        window.addEventListener('resize', updateArrows);
-        updateArrows();
-    });
 });

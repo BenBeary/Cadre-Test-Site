@@ -16,13 +16,46 @@
     </script>
 </head>
 <body data-page="events" data-root="../">
+    <div class="bg-squares bg-squares-left" aria-hidden="true"></div>
+    <div class="bg-squares bg-squares-right" aria-hidden="true"></div>
+
     <div id="site-header"></div>
 
-    <main></main>
+    <main>
+        <section class="news-section" data-blog-section="announcements">
+            <div class="news-inner">
+                <div class="news-header">
+                    <h2 class="news-title">Announcements</h2>
+                </div>
+                <div class="news-search">
+                    <input type="search" placeholder="Search announcements by title or date" aria-label="Search announcements">
+                </div>
+                <div class="news-grid"></div>
+                <div class="news-pagination" role="navigation" aria-label="Announcements pagination"></div>
+            </div>
+        </section>
+
+        <hr class="section-divider">
+
+        <section class="news-section" data-blog-section="events">
+            <div class="news-inner">
+                <div class="news-header">
+                    <h2 class="news-title">Events</h2>
+                </div>
+                <div class="news-search">
+                    <input type="search" placeholder="Search events by title or date" aria-label="Search events">
+                </div>
+                <div class="news-grid"></div>
+                <div class="news-pagination" role="navigation" aria-label="Events pagination"></div>
+            </div>
+        </section>
+    </main>
 
     <div id="site-footer"></div>
 
     <script src="../js/partials.js"></script>
+    <script src="../js/blog-grabber.js"></script>
+    <script src="../js/bg-squares.js"></script>
     <script src="../js/main.js"></script>
 </body>
 </html>
