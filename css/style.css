@@ -161,10 +161,26 @@ h1 {
 }
 
 .site-title {
-    font-weight: 700;
-    font-size: 1.25rem;
-    color: var(--color-fg);
+    display: inline-flex;
+    align-items: center;
+    color: var(--color-primary);
     text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.site-title:hover {
+    color: var(--color-complimentary);
+    text-decoration: none;
+}
+
+.site-logo {
+    display: block;
+    height: 64px;
+    width: auto;
+}
+
+.site-footer .site-logo {
+    height: 48px;
 }
 
 .header-actions {
