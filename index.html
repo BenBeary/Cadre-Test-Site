@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CADRE Alumni</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,300..900;1,300..900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/about-style.css">
+    <link rel="stylesheet" href="css/slideshow.css">
+    <link rel="stylesheet" href="css/video-style.css">
+    <script>
+        (function () {
+            var stored = localStorage.getItem('theme');
+            document.documentElement.setAttribute('data-theme', stored || 'light');
+        })();
+    </script>
+</head>
+<body data-page="home" data-root="">
+    <div id="site-header"></div>
+
+    <main>
+        <section class="about-section">
+            <div class="about-container">
+                <div class="about-text">
+                    <h1>Welcome to CADRE Alumni</h1>
+                    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
+                    <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+                    <p>Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.</p>
+                </div>
+
+                <div class="slideshow" data-autoplay-interval="5000">
+                    <button class="slideshow-arrow slideshow-arrow-prev" aria-label="Previous slide">
+                        <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true">
+                            <polyline points="15 4 7 12 15 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+
+                    <div class="slideshow-viewport">
+                        <img class="slideshow-slide is-active" src="images/main-page/16_9 shot.png" alt="CADRE showcase">
+                        <img class="slideshow-slide" src="images/main-page/DockingBay_Poster_Warm_Wide.png" alt="Docking Bay poster">
+                        <img class="slideshow-slide" src="images/main-page/Signal-link-Poster-Reduced.png" alt="Signal Link poster">
+                    </div>
+
+                    <button class="slideshow-arrow slideshow-arrow-next" aria-label="Next slide">
+                        <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true">
+                            <polyline points="9 4 17 12 9 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+
+                    <div class="slideshow-dots" role="tablist" aria-label="Select slide"></div>
+                </div>
+            </div>
+        </section>
+
+        <hr class="section-divider">
+
+        <section class="news-section">
+            <div class="news-inner">
+                <div class="news-header">
+                    <h2 class="news-title">News &amp; Announcements</h2>
+                    <a href="announcements-and-events/index.html" class="news-more-link">Show more &#10142;</a>
+                </div>
+
+                <div class="news-slider">
+                    <button class="news-arrow news-arrow-prev" type="button" aria-label="Scroll left" hidden>
+                        <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+                            <polyline points="15 4 7 12 15 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                    <button class="news-arrow news-arrow-next" type="button" aria-label="Scroll right">
+                        <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+                            <polyline points="9 4 17 12 9 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                    <div class="news-row">
+                        <a href="announcements-and-events/index.html" class="news-card">
+                            <div class="news-card-image">
+                                <img src="images/main-page/16_9 shot.png" alt="">
+                                <span class="news-card-date">May 12</span>
+                            </div>
+                            <h3 class="news-card-title">Annual Alumni Showcase Returns</h3>
+                        </a>
+
+                        <a href="announcements-and-events/index.html" class="news-card">
+                            <div class="news-card-image">
+                                <img src="images/main-page/DockingBay_Poster_Warm_Wide.png" alt="">
+                                <span class="news-card-date">May 08</span>
+                            </div>
+                            <h3 class="news-card-title">Docking Bay Premieres This Summer</h3>
+                        </a>
+
+                        <a href="announcements-and-events/index.html" class="news-card">
+                            <div class="news-card-image">
+                                <img src="images/main-page/Signal-link-Poster-Reduced.png" alt="">
+                                <span class="news-card-date">Apr 28</span>
+                            </div>
+                            <h3 class="news-card-title">Signal Link Wins Student Award</h3>
+                        </a>
+
+                        <a href="announcements-and-events/index.html" class="news-card">
+                            <div class="news-card-image">
+                                <img src="images/main-page/16_9 shot.png" alt="">
+                                <span class="news-card-date">Apr 19</span>
+                            </div>
+                            <h3 class="news-card-title">Spring Mixer Recap &amp; Photos</h3>
+                        </a>
+
+                        <a href="announcements-and-events/index.html" class="news-card">
+                            <div class="news-card-image">
+                                <img src="images/main-page/DockingBay_Poster_Warm_Wide.png" alt="">
+                                <span class="news-card-date">Apr 10</span>
+                            </div>
+                            <h3 class="news-card-title">New Mentorship Program Open</h3>
+                        </a>
+
+                        <a href="announcements-and-events/index.html" class="news-card news-card-more">
+                            <div class="news-card-more-inner">
+                                <span>Show more &#10142;</span>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <hr class="section-divider">
+
+        <section class="video-section">
+            <div class="video-inner">
+                <div class="video-frame">
+                    <iframe
+                        src="https://www.youtube.com/embed/IFTG52ngvKA"
+                        title="CADRE40 Recap"
+                        frameborder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        referrerpolicy="strict-origin-when-cross-origin"
+                        allowfullscreen></iframe>
+                </div>
+            </div>
+        </section>
+
+        <hr class="section-divider">
+
+        <section class="faq-section">
+            <div class="faq-inner">
+                <h2 class="faq-title">Frequently Asked Questions</h2>
+
+                <div class="faq-list">
+                    <details class="faq-item">
+                        <summary class="faq-question">
+                            <span>What is CADRE Alumni?</span>
+                            <span class="faq-icon" aria-hidden="true"></span>
+                        </summary>
+                        <div class="faq-answer">
+                            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
+                        </div>
+                    </details>
+
+                    <details class="faq-item">
+                        <summary class="faq-question">
+                            <span>How do I join the alumni network?</span>
+                            <span class="faq-icon" aria-hidden="true"></span>
+                        </summary>
+                        <div class="faq-answer">
+                            <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+                        </div>
+                    </details>
+
+                    <details class="faq-item">
+                        <summary class="faq-question">
+                            <span>Are there any membership fees?</span>
+                            <span class="faq-icon" aria-hidden="true"></span>
+                        </summary>
+                        <div class="faq-answer">
+                            <p>Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.</p>
+                        </div>
+                    </details>
+
+                    <details class="faq-item">
+                        <summary class="faq-question">
+                            <span>How can I get involved with events?</span>
+                            <span class="faq-icon" aria-hidden="true"></span>
+                        </summary>
+                        <div class="faq-answer">
+                            <p>Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt.</p>
+                        </div>
+                    </details>
+
+                    <details class="faq-item">
+                        <summary class="faq-question">
+                            <span>Who can I contact for more information?</span>
+                            <span class="faq-icon" aria-hidden="true"></span>
+                        </summary>
+                        <div class="faq-answer">
+                            <p>Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit, sed quia non numquam eius modi tempora incidunt ut labore et dolore magnam aliquam quaerat voluptatem.</p>
+                        </div>
+                    </details>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <div id="site-footer"></div>
+
+    <script src="js/partials.js"></script>
+    <script src="js/Slideshow.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>

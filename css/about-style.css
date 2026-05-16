@@ -1,0 +1,62 @@
+/* Welcome / about section (index.html) */
+.about-section {
+    padding: var(--space-5) var(--space-3);
+}
+
+.about-container {
+    max-width: var(--max-width);
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-5);
+    align-items: center;
+}
+
+.about-text p {
+    margin: 0 0 var(--space-2) 0;
+    color: var(--color-fg);
+}
+
+/* About page (about.html) */
+.about-page {
+    padding: var(--space-5) var(--space-3);
+}
+
+.about-page-inner {
+    max-width: var(--max-width);
+    margin: 0 auto;
+}
+
+.about-page-title {
+    margin: 0 auto var(--space-4) auto;
+    padding-bottom: var(--space-2);
+}
+
+.about-page-title::after {
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.about-page-text {
+    text-align: justify;
+    margin: 0 0 var(--space-3) 0;
+}
+
+.about-page-figure {
+    margin: var(--space-4) 0 0 0;
+}
+
+.about-page-figure img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-soft);
+}
+
+@media (max-width: 800px) {
+    .about-container {
+        grid-template-columns: 1fr;
+        gap: var(--space-4);
+    }
+}
