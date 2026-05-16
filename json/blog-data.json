@@ -23,6 +23,12 @@
             "title": "Blog With People",
             "date": "05-25-2026",
             "thumbnail": "images/misc/CAO-placeholder.png"
+        },
+        {
+            "href": "announcements-and-events/template-two-column-blog.html",
+            "title": "Two Column Blog",
+            "date": "06-01-2026",
+            "thumbnail": "images/misc/CAO-placeholder.png"
         }
     ],
     "events": [
