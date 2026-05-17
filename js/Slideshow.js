@@ -19,19 +19,18 @@ class Slideshow {
     }
 
     buildDots() {
+        const frag = document.createDocumentFragment();
         this.dots = this.slides.map((_, i) => {
             const dot = document.createElement('button');
             dot.type = 'button';
             dot.className = 'slideshow-dot';
+            dot.dataset.index = String(i);
             dot.setAttribute('role', 'tab');
             dot.setAttribute('aria-label', `Go to slide ${i + 1}`);
-            dot.addEventListener('click', () => {
-                this.goTo(i);
-                this.restartAutoplay();
-            });
-            this.dotsContainer.appendChild(dot);
+            frag.appendChild(dot);
             return dot;
         });
+        this.dotsContainer.appendChild(frag);
     }
 
     bindEvents() {
@@ -41,6 +40,15 @@ class Slideshow {
         });
         this.nextBtn.addEventListener('click', () => {
             this.next();
+            this.restartAutoplay();
+        });
+
+        this.dotsContainer.addEventListener('click', e => {
+            const dot = e.target.closest('.slideshow-dot');
+            if (!dot) return;
+            const idx = Number(dot.dataset.index);
+            if (Number.isNaN(idx)) return;
+            this.goTo(idx);
             this.restartAutoplay();
         });
 

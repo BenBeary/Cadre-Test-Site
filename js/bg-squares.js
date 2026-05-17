@@ -24,12 +24,7 @@ function buildSquare(panelWidth, panelHeight, palette) {
     const opacity = randomBetween(BG_SQUARES.minOpacity, BG_SQUARES.maxOpacity);
 
     const sq = document.createElement('span');
-    sq.style.width = `${size}px`;
-    sq.style.height = `${size}px`;
-    sq.style.left = `${x}px`;
-    sq.style.top = `${y}px`;
-    sq.style.backgroundImage = `linear-gradient(to right, ${color}, transparent)`;
-    sq.style.opacity = opacity.toFixed(3);
+    sq.style.cssText = `width:${size}px;height:${size}px;left:${x}px;top:${y}px;background-image:linear-gradient(to right, ${color}, transparent);opacity:${opacity.toFixed(3)};`;
     return sq;
 }
 

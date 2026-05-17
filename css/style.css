@@ -12,6 +12,9 @@
     --shadow-faq: 0 4px 16px rgba(86, 58, 255, 0.08);
 
     --max-width: 1200px;
+    --space-2xs: 0.15rem;
+    --space-xs: 0.25rem;
+    --space-sm: 0.55rem;
     --space-1: 0.5rem;
     --space-2: 1rem;
     --space-3: 1.5rem;
@@ -277,7 +280,7 @@ h1 {
 }
 
 .news-inner {
-    max-width: min(var(--max-width), 80vw);
+    max-width: clamp(320px, 80vw, var(--max-width));
     margin: 0 auto;
 }
 
@@ -313,6 +316,17 @@ h1 {
 .news-row {
     -webkit-mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 60px), transparent 100%);
             mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 60px), transparent 100%);
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: calc((100% - 60px - 2 * var(--space-3)) / 3);
+    gap: var(--space-3);
+    overflow-x: auto;
+    overflow-y: visible;
+    scroll-snap-type: x mandatory;
+    padding: var(--space-2) 0 var(--space-3) 0;
+    padding-right: 60px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border) transparent;
 }
 
 .news-arrow {
@@ -354,20 +368,6 @@ h1 {
 
 .news-arrow-prev { left: calc(-1 * var(--space-3)); }
 .news-arrow-next { right: calc(-1 * var(--space-3)); }
-
-.news-row {
-    display: grid;
-    grid-auto-flow: column;
-    grid-auto-columns: calc((100% - 60px - 2 * var(--space-3)) / 3);
-    gap: var(--space-3);
-    overflow-x: auto;
-    overflow-y: visible;
-    scroll-snap-type: x mandatory;
-    padding: var(--space-2) 0 var(--space-3) 0;
-    padding-right: 60px;
-    scrollbar-width: thin;
-    scrollbar-color: var(--color-border) transparent;
-}
 
 .news-row::-webkit-scrollbar {
     height: 6px;
@@ -430,7 +430,7 @@ h1 {
     border-radius: 4px;
     font-size: 1rem;
     font-weight: 600;
-    padding: 0.2rem 0.55rem;
+    padding: 0.2rem var(--space-sm);
     letter-spacing: 0.02em;
 }
 
@@ -555,7 +555,7 @@ h1 {
     display: flex;
     flex-direction: column;
     justify-content: center;
-    gap: 0.25rem;
+    gap: var(--space-xs);
     min-width: 0;
 }
 
@@ -677,7 +677,7 @@ h1 {
     color: var(--color-fg);
     font: inherit;
     font-weight: 600;
-    padding: 0.5rem var(--space-2);
+    padding: var(--space-1) var(--space-2);
     cursor: pointer;
     transition: background-color 0.2s ease, color 0.2s ease;
 }
@@ -705,7 +705,7 @@ h1 {
 
 .news-search input {
     flex: 1;
-    padding: 0.55rem var(--space-2);
+    padding: var(--space-sm) var(--space-2);
     font: inherit;
     color: var(--color-fg);
     background-color: var(--color-surface);
@@ -764,7 +764,7 @@ h1 {
     align-items: flex-end;
     min-width: 24px;
     height: 36px;
-    padding: 0 0.25rem;
+    padding: 0 var(--space-xs);
     color: var(--color-muted);
     user-select: none;
 }
@@ -970,6 +970,11 @@ h1 {
         top: var(--space-2);
         left: var(--space-3);
     }
+
+    .faq-answer p {
+        text-align: justify;
+        hyphens: auto;
+    }
 }
 
 @media (max-width: 480px) {
@@ -980,12 +985,5 @@ h1 {
 
     .footer-socials {
         gap: var(--space-1);
-    }
-}
-
-@media (max-width: 800px) {
-    .faq-answer p {
-        text-align: justify;
-        hyphens: auto;
     }
 }

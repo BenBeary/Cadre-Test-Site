@@ -25,7 +25,9 @@ function initHeaderBindings() {
 
         toggle.addEventListener('click', openNav);
         close.addEventListener('click', closeNav);
-        nav.querySelectorAll('a').forEach(link => link.addEventListener('click', closeNav));
+        nav.addEventListener('click', e => {
+            if (e.target.closest('a')) closeNav();
+        });
         document.addEventListener('keydown', e => {
             if (e.key === 'Escape' && nav.classList.contains('is-open')) closeNav();
         });
@@ -35,15 +37,14 @@ function initHeaderBindings() {
 document.addEventListener('partials:ready', initHeaderBindings);
 
 document.addEventListener('DOMContentLoaded', () => {
-    const items = document.querySelectorAll('.faq-item');
-    items.forEach(item => {
-        item.addEventListener('toggle', () => {
-            if (item.open) {
-                items.forEach(other => {
-                    if (other !== item) other.open = false;
-                });
-            }
-        });
-    });
+    const faqList = document.querySelector('.faq-list');
+    if (!faqList) return;
 
+    faqList.addEventListener('toggle', e => {
+        const item = e.target.closest('.faq-item');
+        if (!item || !item.open) return;
+        faqList.querySelectorAll('.faq-item[open]').forEach(other => {
+            if (other !== item) other.open = false;
+        });
+    }, true);
 });

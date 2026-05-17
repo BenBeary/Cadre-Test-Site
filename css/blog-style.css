@@ -3,7 +3,7 @@
 }
 
 .blog-inner {
-    max-width: min(var(--max-width), 60vw);
+    max-width: clamp(320px, 60vw, var(--max-width));
     margin: 0 auto;
 }
 
@@ -35,7 +35,7 @@
 
 .blog-meta-label {
     color: var(--color-muted);
-    margin-right: 0.35rem;
+    margin-right: var(--space-xs);
 }
 
 .blog-meta-value {
@@ -131,7 +131,7 @@
 .blog-row-num {
     display: inline-block;
     margin-bottom: var(--space-1);
-    padding: 0.15rem 0.55rem;
+    padding: var(--space-2xs) var(--space-sm);
     background-color: var(--color-primary);
     color: #fff;
     font-size: 0.8rem;
@@ -184,7 +184,7 @@
     flex-direction: column;
     align-items: center;
     text-align: center;
-    gap: 0.5rem;
+    gap: var(--space-1);
 }
 
 .contributor-photo {

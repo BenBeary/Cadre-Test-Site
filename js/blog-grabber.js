@@ -46,10 +46,24 @@ function formatCardDateRange(start, end) {
     return `${SHORT_MONTHS[start.getMonth()]} ${startDay}, ${start.getFullYear()} – ${SHORT_MONTHS[end.getMonth()]} ${endDay}, ${end.getFullYear()}`;
 }
 
-async function fetchBlogData() {
-    const response = await fetch(`${getRoot()}${BLOG_DATA_PATH}`);
-    if (!response.ok) throw new Error(`Failed to load blog data: ${response.status}`);
-    return response.json();
+let blogDataPromise = null;
+function fetchBlogData() {
+    if (!blogDataPromise) {
+        blogDataPromise = fetch(`${getRoot()}${BLOG_DATA_PATH}`).then(response => {
+            if (!response.ok) throw new Error(`Failed to load blog data: ${response.status}`);
+            return response.json();
+        });
+    }
+    return blogDataPromise;
+}
+
+function showLoadError(container, message = 'Could not load posts. Please try again later.') {
+    if (!container) return;
+    container.innerHTML = '';
+    const note = document.createElement('p');
+    note.className = 'news-grid-empty';
+    note.textContent = message;
+    container.appendChild(note);
 }
 
 function withDefaults(post) {
@@ -275,11 +289,12 @@ function initListingSection({ posts, gridEl, searchEl, filterEl, paginationEl, p
     }
 
     if (filterEl) {
+        const filterButtons = Array.from(filterEl.querySelectorAll('[data-filter]'));
         filterEl.addEventListener('click', e => {
             const btn = e.target.closest('[data-filter]');
             if (!btn) return;
             typeFilter = btn.dataset.filter;
-            filterEl.querySelectorAll('[data-filter]').forEach(b => {
+            filterButtons.forEach(b => {
                 const active = b === btn;
                 b.classList.toggle('is-active', active);
                 b.setAttribute('aria-selected', active ? 'true' : 'false');
@@ -330,6 +345,12 @@ async function populateListingPage() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    populateHomePreview().catch(err => console.error('[blog-grabber]', err));
-    populateListingPage().catch(err => console.error('[blog-grabber]', err));
+    populateHomePreview().catch(err => {
+        console.error('[blog-grabber]', err);
+        document.querySelectorAll('[data-blog-preview] .news-list').forEach(el => showLoadError(el));
+    });
+    populateListingPage().catch(err => {
+        console.error('[blog-grabber]', err);
+        document.querySelectorAll('[data-blog-section] .news-grid').forEach(el => showLoadError(el));
+    });
 });

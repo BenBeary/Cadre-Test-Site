@@ -73,7 +73,7 @@
     bottom: var(--space-2);
     transform: translateX(-50%);
     display: flex;
-    gap: 0.5rem;
+    gap: var(--space-1);
 }
 
 .slideshow-dot {

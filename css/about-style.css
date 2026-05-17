@@ -4,7 +4,7 @@
 }
 
 .about-container {
-    max-width: min(var(--max-width), 80vw);
+    max-width: clamp(320px, 80vw, var(--max-width));
     margin: 0 auto;
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -23,7 +23,7 @@
 }
 
 .about-page-inner {
-    max-width: min(var(--max-width), 60vw);
+    max-width: clamp(320px, 60vw, var(--max-width));
     margin: 0 auto;
 }
 
