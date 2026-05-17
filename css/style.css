@@ -277,7 +277,7 @@ h1 {
 }
 
 .news-inner {
-    max-width: var(--max-width);
+    max-width: min(var(--max-width), 80vw);
     margin: 0 auto;
 }
 
@@ -577,6 +577,10 @@ h1 {
     .news-columns {
         grid-template-columns: 1fr;
         gap: var(--space-3);
+    }
+
+    .news-inner {
+        max-width: 100%;
     }
 }
 
@@ -976,5 +980,12 @@ h1 {
 
     .footer-socials {
         gap: var(--space-1);
+    }
+}
+
+@media (max-width: 800px) {
+    .faq-answer p {
+        text-align: justify;
+        hyphens: auto;
     }
 }

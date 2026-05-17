@@ -1,11 +1,23 @@
 const BLOG_DATA_PATH = 'json/blog-data.json';
 
+const DEFAULT_POST = {
+    href: '#',
+    title: 'Untitled Post',
+    date: '01-01-2026',
+    thumbnail: 'images/misc/CAO-placeholder.png'
+};
+
 function getRoot() {
     return document.body.dataset.root || '';
 }
 
 function parseBlogDate(str) {
-    const [month, day, year] = str.split('-').map(Number);
+    if (typeof str !== 'string') return parseBlogDate(DEFAULT_POST.date);
+    const parts = str.split('-').map(Number);
+    if (parts.length !== 3 || parts.some(n => Number.isNaN(n))) {
+        return parseBlogDate(DEFAULT_POST.date);
+    }
+    const [month, day, year] = parts;
     return new Date(year, month - 1, day);
 }
 
@@ -40,13 +52,25 @@ async function fetchBlogData() {
     return response.json();
 }
 
+function withDefaults(post) {
+    const merged = { ...DEFAULT_POST, ...(post && typeof post === 'object' ? post : {}) };
+    if (!merged.href) merged.href = DEFAULT_POST.href;
+    if (!merged.title) merged.title = DEFAULT_POST.title;
+    if (!merged.thumbnail) merged.thumbnail = DEFAULT_POST.thumbnail;
+    if (!merged.date) merged.date = DEFAULT_POST.date;
+    return merged;
+}
+
 function decorate(posts, type) {
-    return (posts || []).map(post => ({
-        ...post,
-        _date: parseBlogDate(post.date),
-        _endDate: post.end_date ? parseBlogDate(post.end_date) : null,
-        _type: type
-    }));
+    return (posts || []).map(post => {
+        const filled = withDefaults(post);
+        return {
+            ...filled,
+            _date: parseBlogDate(filled.date),
+            _endDate: filled.end_date ? parseBlogDate(filled.end_date) : null,
+            _type: type
+        };
+    });
 }
 
 function sortNewestFirst(posts) {

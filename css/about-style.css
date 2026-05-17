@@ -4,7 +4,7 @@
 }
 
 .about-container {
-    max-width: var(--max-width);
+    max-width: min(var(--max-width), 80vw);
     margin: 0 auto;
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -23,7 +23,7 @@
 }
 
 .about-page-inner {
-    max-width: var(--max-width);
+    max-width: min(var(--max-width), 60vw);
     margin: 0 auto;
 }
 
@@ -58,5 +58,15 @@
     .about-container {
         grid-template-columns: 1fr;
         gap: var(--space-4);
+        max-width: 100%;
+    }
+
+    .about-text p {
+        text-align: justify;
+        hyphens: auto;
+    }
+
+    .about-page-inner {
+        max-width: 100%;
     }
 }

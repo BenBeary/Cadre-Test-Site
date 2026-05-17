@@ -70,6 +70,12 @@ JSON step the post still exists at its URL but no one will find it.
    first. If it doesn't show up, check the browser dev tools console: a typo
    in the JSON (missing comma, trailing comma) will break the whole loader.
 
+Missing fields fall back to defaults defined at the top of
+/js/blog-grabber.js (DEFAULT_POST). If you forget a thumbnail the placeholder
+is shown; if you forget a title it renders as "Untitled Post"; if the date
+is missing or malformed it falls back to 01-01-2026. These are escape hatches,
+not a substitute for real data - always set the fields you can.
+
 
 --------------------------------------------------------------------------------
 EDITING THE HEADER OR FOOTER
