@@ -46,6 +46,8 @@
 .blog-body p {
     font-size: 1.05rem;
     line-height: 1.7;
+    text-align: justify;
+    hyphens: auto;
     margin: 0 0 var(--space-3) 0;
     color: var(--color-fg);
 }
@@ -55,6 +57,10 @@
 }
 
 .blog-figure {
+    margin: var(--space-4) 0;
+}
+
+.blog-slideshow {
     margin: var(--space-4) 0;
 }
 
@@ -116,6 +122,8 @@
 .blog-row-text p {
     font-size: 1.05rem;
     line-height: 1.7;
+    text-align: justify;
+    hyphens: auto;
     margin: 0 0 var(--space-3) 0;
     color: var(--color-fg);
 }
@@ -236,9 +244,4 @@
         gap: var(--space-2);
     }
 
-    .blog-body p,
-    .blog-row-text p {
-        text-align: justify;
-        hyphens: auto;
-    }
 }

@@ -185,6 +185,30 @@ divs at the top of <body> and include the script:
 
 
 --------------------------------------------------------------------------------
+THE IMAGE MODAL (LIGHTBOX)
+--------------------------------------------------------------------------------
+
+Every <img> inside <main> is clickable site-wide - clicking opens a fullscreen
+modal that lets visitors step through every image on that page with prev/next
+arrows, arrow keys, or click. Close with the X, the ESC key, or clicking the
+backdrop.
+
+Exclusions (these never open the modal):
+    - Blog listing cards (.news-card img)
+    - Home preview mini-cards (.news-mini-card img)
+    - Contributor profile photos (.contributor-photo img)
+    - The site logo and decorative background squares
+
+To opt a one-off image out, add class="no-modal" to the <img>.
+
+Captions in the modal come from the nearest <figcaption>, falling back to the
+image's alt text.
+
+The system is in /js/image-modal.js. It runs automatically on every page that
+includes the script - no setup needed when adding new images.
+
+
+--------------------------------------------------------------------------------
 COMMON GOTCHAS
 --------------------------------------------------------------------------------
 

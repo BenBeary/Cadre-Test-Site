@@ -7,12 +7,6 @@
             "thumbnail": "images/misc/CAO-placeholder.png"
         },
         {
-            "href": "announcements-and-events/template-basic-blog.html",
-            "title": "Basic Blog",
-            "date": "04-28-2026",
-            "thumbnail": "images/misc/CAO-placeholder.png"
-        },
-        {
             "href": "announcements-and-events/template-youtube-video.html",
             "title": "Youtube Video",
             "date": "05-10-2026",
@@ -29,6 +23,12 @@
             "title": "Two Column Blog",
             "date": "06-01-2026",
             "thumbnail": "images/misc/CAO-placeholder.png"
+        },
+        {
+            "href": "announcements-and-events/template-blog-Slideshow.html",
+            "title": "Basic Blog Slideshow",
+            "date": "06-10-2026",
+            "thumbnail": "images/misc/CAO-placeholder.png"
         }
     ],
     "events": [
@@ -41,14 +41,8 @@
         },
         {
             "href": "announcements-and-events/template-event.html",
-            "title": "The Extraordinarily Long Annual Alumni Showcase Weekend Featuring Special Guests, Live Performances, and a Surprise Keynote Speaker",
+            "title": "An Extremely Large Title Description to see how the blog cards will handle Large Titles and if it Will expand properly with out issue",
             "date": "05-29-2026",
-            "thumbnail": "images/misc/CAO-placeholder.png"
-        },
-        {
-            "href": "announcements-and-events/template-event.html",
-            "title": "Event",
-            "date": "05-08-2026",
             "thumbnail": "images/misc/CAO-placeholder.png"
         }
     ]
