@@ -197,7 +197,7 @@ function getPageSize(desktopSize, mobileSize) {
     return window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`).matches ? mobileSize : desktopSize;
 }
 
-function initListingSection({ posts, gridEl, searchEl, filterEl, paginationEl, pageSize = 9, mobilePageSize = null }) {
+function initListingSection({ posts, gridEl, searchEl, filterEl, paginationEl, pageSize = 9, mobilePageSize = null, cardRenderer = renderNewsCard }) {
     const root = getRoot();
     const sorted = sortNewestFirst(posts);
     let currentPage = 1;
@@ -228,7 +228,7 @@ function initListingSection({ posts, gridEl, searchEl, filterEl, paginationEl, p
             empty.textContent = 'No matching posts.';
             gridEl.appendChild(empty);
         } else {
-            pageItems.forEach(post => gridEl.appendChild(renderNewsCard(post, root)));
+            pageItems.forEach(post => gridEl.appendChild(cardRenderer(post, root)));
         }
 
         renderPagination(totalPages);
@@ -337,7 +337,8 @@ async function populateListingPage() {
             searchEl,
             filterEl,
             paginationEl,
-            pageSize: key === 'combined' ? 9 : 6
+            pageSize: key === 'combined' ? 9 : 6,
+            cardRenderer: key === 'combined' ? renderMiniCard : renderNewsCard
         });
     });
 

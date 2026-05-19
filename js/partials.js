@@ -39,7 +39,7 @@ const HEADER_HTML = `
                     </button>
                     <a href="{{root}}index.html" data-page="home">Home</a>
                     <a href="{{root}}about.html" data-page="about">About</a>
-                    <a href="{{root}}announcements-and-events/index.html" data-page="events">Announcements &amp; Events</a>
+                    <a href="{{root}}news-and-events/index.html" data-page="events">News &amp; Events</a>
                 </nav>
             </div>
         </div>

@@ -4,13 +4,14 @@ const MODAL_EXCLUDE_SELECTOR = [
     '.contributor-photo img',
     '.site-logo',
     '.bg-squares img',
-    '.no-modal'
+    '.no-modal',
+    '.about-link img'
 ].join(', ');
 
 function isEligibleImage(img) {
     if (!img.closest('main')) return false;
     if (img.matches(MODAL_EXCLUDE_SELECTOR)) return false;
-    if (img.closest('.news-card, .news-mini-card, .contributor-photo')) return false;
+    if (img.closest('.news-card, .news-mini-card, .contributor-photo, .about-link')) return false;
     return true;
 }
 
