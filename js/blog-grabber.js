@@ -183,7 +183,9 @@ async function populateHomePreview(limit = 3) {
         const key = column.dataset.blogPreview;
         const list = column.querySelector('.news-list');
         if (!list) return;
-        const posts = sortNewestFirst(decorate(data[key], key)).slice(0, limit);
+        const posts = key === 'combined'
+            ? sortNewestFirst([...decorate(data.announcements, 'announcements'), ...decorate(data.events, 'events')]).slice(0, limit)
+            : sortNewestFirst(decorate(data[key], key)).slice(0, limit);
         list.innerHTML = '';
         posts.forEach(post => list.appendChild(renderMiniCard(post, root)));
     });

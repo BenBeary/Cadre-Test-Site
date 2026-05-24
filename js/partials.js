@@ -39,7 +39,8 @@ const HEADER_HTML = `
                     </button>
                     <a href="{{root}}index.html" data-page="home">Home</a>
                     <a href="{{root}}about.html" data-page="about">About</a>
-                    <a href="{{root}}news-and-events/index.html" data-page="events">News &amp; Events</a>
+                    <a href="{{root}}Announcements-Blogs/index.html" data-page="events">Announcements</a>
+                    <a href="{{root}}calender.html" data-page="calendar">Calendar</a>
                 </nav>
             </div>
         </div>

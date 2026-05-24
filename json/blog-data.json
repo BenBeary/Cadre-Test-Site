@@ -1,31 +1,31 @@
 {
     "announcements": [
         {
-            "href": "news-and-events/template-basic-blog.html",
+            "href": "Announcements-Blogs/template-basic-blog.html",
             "title": "Basic Blog",
             "date": "05-12-2026",
             "thumbnail": "images/misc/CAO-placeholder.png"
         },
         {
-            "href": "news-and-events/template-youtube-video.html",
+            "href": "Announcements-Blogs/template-youtube-video.html",
             "title": "Youtube Video",
             "date": "05-10-2026",
             "thumbnail": "images/misc/CAO-placeholder.png"
         },
         {
-            "href": "news-and-events/template-blog-with-people.html",
+            "href": "Announcements-Blogs/template-blog-with-people.html",
             "title": "Blog With People",
             "date": "05-25-2026",
             "thumbnail": "images/misc/CAO-placeholder.png"
         },
         {
-            "href": "news-and-events/template-two-column-blog.html",
+            "href": "Announcements-Blogs/template-two-column-blog.html",
             "title": "Two Column Blog",
             "date": "06-01-2026",
             "thumbnail": "images/misc/CAO-placeholder.png"
         },
         {
-            "href": "news-and-events/template-blog-Slideshow.html",
+            "href": "Announcements-Blogs/template-blog-Slideshow.html",
             "title": "Basic Blog Slideshow",
             "date": "06-10-2026",
             "thumbnail": "images/misc/CAO-placeholder.png"
@@ -33,63 +33,63 @@
     ],
     "events": [
         {
-            "href": "news-and-events/template-event.html",
+            "href": "Announcements-Blogs/template-event.html",
             "title": "Event",
             "date": "06-18-2026",
             "end_date": "06-21-2026",
             "thumbnail": "images/misc/CAO-placeholder.png"
         },
         {
-            "href": "news-and-events/template-event.html",
+            "href": "Announcements-Blogs/template-event.html",
             "title": "Filler Card",
             "date": "06-18-2020",
             "end_date": "06-21-2022",
             "thumbnail": "images/misc/CAO-placeholder.png"
         },
         {
-            "href": "news-and-events/template-event.html",
+            "href": "Announcements-Blogs/template-event.html",
             "title": "Filler Card",
             "date": "06-18-2020",
             "end_date": "06-21-2022",
             "thumbnail": "images/misc/CAO-placeholder.png"
         },
         {
-            "href": "news-and-events/template-event.html",
+            "href": "Announcements-Blogs/template-event.html",
             "title": "Filler Card",
             "date": "06-18-2020",
             "end_date": "06-21-2022",
             "thumbnail": "images/misc/CAO-placeholder.png"
         },
         {
-            "href": "news-and-events/template-event.html",
+            "href": "Announcements-Blogs/template-event.html",
             "title": "Filler Card",
             "date": "06-18-2020",
             "end_date": "06-21-2022",
             "thumbnail": "images/misc/CAO-placeholder.png"
         },
         {
-            "href": "news-and-events/template-event.html",
+            "href": "Announcements-Blogs/template-event.html",
             "title": "Filler Card",
             "date": "06-18-2020",
             "end_date": "06-21-2022",
             "thumbnail": "images/misc/CAO-placeholder.png"
         },
         {
-            "href": "news-and-events/template-event.html",
+            "href": "Announcements-Blogs/template-event.html",
             "title": "Filler Card",
             "date": "06-18-2020",
             "end_date": "06-21-2022",
             "thumbnail": "images/misc/CAO-placeholder.png"
         },
         {
-            "href": "news-and-events/template-blog-youtube-with-people.html",
+            "href": "Announcements-Blogs/template-blog-youtube-with-people.html",
             "title": "Youtube with people",
             "date": "06-18-2026",
             "end_date": "06-21-2026",
             "thumbnail": "images/misc/CAO-placeholder.png"
         },
         {
-            "href": "news-and-events/template-event.html",
+            "href": "Announcements-Blogs/template-event.html",
             "title": "An Extremely Large Title Description to see how the blog cards will handle Large Titles and if it Will expand properly with out issue",
             "date": "05-29-2026",
             "thumbnail": "images/misc/CAO-placeholder.png"

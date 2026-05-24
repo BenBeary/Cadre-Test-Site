@@ -11,7 +11,7 @@ JSON loader uses fetch(). Easiest options:
 Project layout
 --------------
 /                              site root (index.html, about.html live here)
-/news-and-events/     listing page + post templates
+/Announcements-Blogs/     listing page + post templates
 /css/                          stylesheets
 /js/                           scripts (partials, blog loader, etc.)
 /images/main-page/             site photography
@@ -23,12 +23,12 @@ Project layout
 ADDING A NEW BLOG POST
 --------------------------------------------------------------------------------
 
-A post is two things: an HTML file in /news-and-events/ and an entry
+A post is two things: an HTML file in /Announcements-Blogs/ and an entry
 in /json/blog-data.json. The JSON entry is what makes the post appear on the
 home page preview and the announcements & events listing page. If you skip the
 JSON step the post still exists at its URL but no one will find it.
 
-1. Pick the closest template in /news-and-events/ and copy it:
+1. Pick the closest template in /Announcements-Blogs/ and copy it:
        template-basic-blog.html        text-only post
        template-blog-with-people.html  text post + Contributors sidebar
        template-youtube-video.html     text post with an embedded YouTube video
@@ -48,7 +48,7 @@ JSON step the post still exists at its URL but no one will find it.
 
    Required fields:
      "href"      path from the repo root, e.g.
-                   "news-and-events/spring-mixer-recap.html"
+                   "Announcements-Blogs/spring-mixer-recap.html"
      "title"     what the listing card shows
      "date"      MM-DD-YYYY (used for sorting and the card date pill)
      "thumbnail" path to the card image, e.g. "images/misc/CAO-placeholder.png"
@@ -60,7 +60,7 @@ JSON step the post still exists at its URL but no one will find it.
    Example entry:
 
        {
-           "href": "news-and-events/spring-mixer-recap.html",
+           "href": "Announcements-Blogs/spring-mixer-recap.html",
            "title": "Spring Mixer Recap & Photos",
            "date": "04-19-2026",
            "thumbnail": "images/misc/CAO-placeholder.png"
@@ -90,7 +90,7 @@ in one place. Both live in /js/partials.js as template strings:
 Things to know:
     - {{root}} inside the template gets replaced with the path back to the
       repo root for the current page. Always prefix links/images with it so
-      they work from both / and /news-and-events/.
+      they work from both / and /Announcements-Blogs/.
     - The "active" nav link is highlighted based on <body data-page="...">.
       Pages currently use: home, about, events.
     - Don't put real page-specific content here. Page-specific stuff lives in
@@ -118,7 +118,7 @@ Each icon is a <symbol> with an id like "icon-instagram". To use one:
 
 Notes:
     - The href path is relative to the page using it. From the root use
-      "images/misc/...", from /news-and-events/ use "../images/misc/...".
+      "images/misc/...", from /Announcements-Blogs/ use "../images/misc/...".
     - "currentColor" in the sprite means the icon color comes from CSS. The
       site uses --color-complimentary by default, --color-primary on hover.
       You almost never need to override this.
@@ -222,7 +222,7 @@ COMMON GOTCHAS
 
 - Path prefixes:
     Root-level pages (index.html, about.html):   "images/..." / "css/..."
-    /news-and-events/ pages:            "../images/..." / "../css/..."
+    /Announcements-Blogs/ pages:            "../images/..." / "../css/..."
   The data-root attribute on <body> ("" or "../") helps partials.js inject
   paths that work either way.
 
