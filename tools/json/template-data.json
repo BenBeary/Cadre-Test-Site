@@ -50,7 +50,7 @@
     {
       "id": "contributors",
       "name": "Blog + Contributors",
-      "icon": "👥",
+      "icon": "🤝",
       "desc": "Blog content with a contributor sidebar.",
       "settings": { "isEvent": false, "hasSlideshowCss": false, "showContributors": true },
       "blocks": [

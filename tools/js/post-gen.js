@@ -182,7 +182,7 @@ function getBuiltinTemplates() {
           blocks: [ {type:'youtube-inline',url:''}, {type:'paragraph',text:''} ],
           contributors: [] },
 
-        { id: 'contributors', name: 'Blog + Contributors', icon: '👥', desc: 'Blog content with a contributor sidebar.',
+        { id: 'contributors', name: 'Blog + Contributors', icon: '🤝', desc: 'Blog content with a contributor sidebar.',
           settings: { isEvent: false, hasSlideshowCss: false, showContributors: true },
           blocks: [ {type:'paragraph',text:''}, {type:'image',url:'',alt:'',caption:''}, {type:'paragraph',text:''} ],
           contributors: [ {name:'',photo:'',socials:[]} ] },
