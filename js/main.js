@@ -36,6 +36,20 @@ function initHeaderBindings() {
 
 document.addEventListener('partials:ready', initHeaderBindings);
 
+function applySocialIconTitles() {
+    document.querySelectorAll('a.social-icon').forEach(link => {
+        if (link.hasAttribute('title')) return;
+        const href = (link.getAttribute('href') || '').trim();
+        const label = (link.getAttribute('aria-label') || '').trim();
+        const isReal = href && href !== '#' && !href.startsWith('javascript:');
+        if (isReal) link.setAttribute('title', label ? `${label} — ${href}` : href);
+        else if (label) link.setAttribute('title', label);
+    });
+}
+
+document.addEventListener('partials:ready', applySocialIconTitles);
+document.addEventListener('DOMContentLoaded', applySocialIconTitles);
+
 document.addEventListener('DOMContentLoaded', () => {
     const faqList = document.querySelector('.faq-list');
     if (!faqList) return;
