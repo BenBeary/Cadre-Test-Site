@@ -609,6 +609,47 @@ document.getElementById('modal-overlay').addEventListener('click', function(e) {
     if (e.target === this) { state.pendingTemplate = null; hideModal(); }
 });
 
+// ─── Clear post ───────────────────────────────────────────────────────────────
+
+function isPostEmpty() {
+    if (state.blocks.length > 0) return false;
+    if (state.contributors.length > 0) return false;
+    if (state.templateId && state.templateId !== 'blank') return false;
+    const ids = ['f-title', 'f-author', 'f-thumbnail', 'f-end-date', 'f-filename'];
+    for (var i = 0; i < ids.length; i++) {
+        if (getVal(ids[i])) return false;
+    }
+    return true;
+}
+
+function clearPost() {
+    ['f-title', 'f-author', 'f-thumbnail', 'f-end-date', 'f-filename'].forEach(function(id) {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    setDefaultDate();
+    filenameAutoFill = true;
+    applyTemplate('blank'); // resets blocks, contributors, template selection, output
+}
+
+function showClearModal() { document.getElementById('clear-modal-overlay').style.display = 'flex'; }
+function hideClearModal() { document.getElementById('clear-modal-overlay').style.display = 'none'; }
+
+function requestClear() {
+    if (isPostEmpty()) { clearPost(); return; }
+    showClearModal();
+}
+document.getElementById('btn-clear-post').addEventListener('click', requestClear);
+document.getElementById('btn-clear-post-step').addEventListener('click', requestClear);
+document.getElementById('clear-modal-cancel').addEventListener('click', hideClearModal);
+document.getElementById('clear-modal-confirm').addEventListener('click', function() {
+    hideClearModal();
+    clearPost();
+});
+document.getElementById('clear-modal-overlay').addEventListener('click', function(e) {
+    if (e.target === this) hideClearModal();
+});
+
 // ─── Save / Load ──────────────────────────────────────────────────────────────
 
 function getSaveData() {
@@ -874,6 +915,66 @@ document.getElementById('btn-generate').addEventListener('click', function() {
     sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
 
+// ─── Preview ──────────────────────────────────────────────────────────────────
+
+// Generated posts use `../`-prefixed asset paths because they live in
+// /Announcements-Blogs/. Inject a <base> pointing at that folder so the
+// preview iframe (and any "open in new tab" blob) resolves CSS/JS/images
+// exactly like the deployed post.
+function buildPreviewHtml() {
+    if (!state.templateId) { alert('Please choose a template first.'); return null; }
+    syncBlocksFromDOM();
+    syncContributorsFromDOM();
+    const html = buildFullHTML();
+    const baseHref = new URL('../Announcements-Blogs/', window.location.href).href;
+    const baseTag  = '<base href="' + baseHref + '">';
+    return html.replace(/<head([^>]*)>/i, '<head$1>\n    ' + baseTag);
+}
+
+function openPreview() {
+    const html = buildPreviewHtml();
+    if (html === null) return;
+    document.getElementById('preview-iframe').srcdoc = html;
+    document.getElementById('preview-overlay').style.display = 'flex';
+    document.body.classList.add('preview-open');
+}
+
+function closePreview() {
+    document.getElementById('preview-overlay').style.display = 'none';
+    document.body.classList.remove('preview-open');
+    document.getElementById('preview-iframe').srcdoc = '';
+}
+
+function isPreviewOpen() {
+    return document.getElementById('preview-overlay').style.display === 'flex';
+}
+
+document.getElementById('btn-preview').addEventListener('click', openPreview);
+document.getElementById('btn-preview-close').addEventListener('click', closePreview);
+
+document.getElementById('btn-preview-refresh').addEventListener('click', function() {
+    const html = buildPreviewHtml();
+    if (html === null) return;
+    document.getElementById('preview-iframe').srcdoc = html;
+});
+
+document.getElementById('btn-preview-newtab').addEventListener('click', function() {
+    const html = buildPreviewHtml();
+    if (html === null) return;
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url  = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+    setTimeout(function() { URL.revokeObjectURL(url); }, 60000);
+});
+
+document.getElementById('preview-overlay').addEventListener('click', function(e) {
+    if (e.target === this) closePreview();
+});
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && isPreviewOpen()) closePreview();
+});
+
 // ─── Output buttons ───────────────────────────────────────────────────────────
 
 document.getElementById('btn-copy-html').addEventListener('click', function() { copyToClipboard(document.getElementById('out-html').value, this); });
@@ -906,10 +1007,11 @@ initContribEvents();
 loadTemplates();
 loadBaseTemplate();
 
-(function setDefaultDate() {
+function setDefaultDate() {
     const d = new Date();
     const iso = d.getFullYear() + '-'
         + String(d.getMonth() + 1).padStart(2, '0') + '-'
         + String(d.getDate()).padStart(2, '0');
     document.getElementById('f-date').value = iso;
-})();
+}
+setDefaultDate();

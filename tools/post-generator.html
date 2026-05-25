@@ -22,6 +22,7 @@
     <div class="header-actions">
         <button class="btn-header-action" id="btn-save-layout" disabled>💾 Save</button>
         <button class="btn-header-action" id="btn-load-layout">📂 Load</button>
+        <button class="btn-header-action btn-header-danger" id="btn-clear-post" title="Wipe the current post and start fresh">🗑 Clear</button>
         <input type="file" id="import-file" accept=".json" style="display:none">
     </div>
 </header>
@@ -44,6 +45,7 @@
             <div class="step-header">
                 <div class="step-number">1</div>
                 <div class="step-title">Post Details</div>
+                <button class="btn-panel-toggle btn-panel-toggle-danger" id="btn-clear-post-step" title="Wipe the current post and start fresh">🗑 Clear Post</button>
             </div>
             <div class="field-grid">
                 <div class="field full">
@@ -87,6 +89,7 @@
 
         <!-- Generate button -->
         <div class="generate-bar">
+            <button class="btn-generate btn-generate-secondary" id="btn-preview">👁 Preview</button>
             <button class="btn-generate" id="btn-generate">Generate Post HTML</button>
         </div>
 
@@ -137,6 +140,19 @@
     </div>
 </div>
 
+<!-- Preview overlay -->
+<div class="preview-overlay" id="preview-overlay" style="display:none">
+    <div class="preview-frame-wrap">
+        <div class="preview-toolbar">
+            <span class="preview-title">Live Preview</span>
+            <button class="btn-preview-action" id="btn-preview-refresh" title="Re-render with the latest editor changes">↻ Refresh</button>
+            <button class="btn-preview-action" id="btn-preview-newtab" title="Open in a new browser tab">↗ New Tab</button>
+            <button class="btn-preview-close" id="btn-preview-close" title="Close (Esc)">✕</button>
+        </div>
+        <iframe id="preview-iframe" title="Post preview"></iframe>
+    </div>
+</div>
+
 <!-- Switch template confirmation modal -->
 <div class="modal-overlay" id="modal-overlay" style="display:none">
     <div class="modal-box">
@@ -145,6 +161,18 @@
         <div class="modal-actions">
             <button class="btn-modal-cancel" id="modal-cancel">Keep Editing</button>
             <button class="btn-modal-confirm" id="modal-confirm">Switch Template</button>
+        </div>
+    </div>
+</div>
+
+<!-- Clear post confirmation modal -->
+<div class="modal-overlay" id="clear-modal-overlay" style="display:none">
+    <div class="modal-box">
+        <div class="modal-title">Clear Post?</div>
+        <div class="modal-body">This wipes the title, author, date, thumbnail, content blocks, contributors, and the generated output. This cannot be undone.</div>
+        <div class="modal-actions">
+            <button class="btn-modal-cancel" id="clear-modal-cancel">Keep Editing</button>
+            <button class="btn-modal-confirm" id="clear-modal-confirm">Clear Post</button>
         </div>
     </div>
 </div>
