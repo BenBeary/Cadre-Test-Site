@@ -292,6 +292,7 @@ textarea { resize: vertical; min-height: 80px; }
 .block-type-badge.type-image     { background: rgba(60,170,100,0.15); color: #3ecf6e; }
 .block-type-badge.type-youtube   { background: rgba(220,60,60,0.15);  color: #ef7070; }
 .block-type-badge.type-slideshow { background: rgba(200,130,40,0.15); color: #f0a050; }
+.block-type-badge.type-section-heading { background: rgba(176,112,248,0.15); color: #b070f8; }
 .block-controls { margin-left: auto; display: flex; gap: 4px; }
 .btn-icon {
     background: none;

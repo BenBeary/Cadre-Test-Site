@@ -253,6 +253,7 @@ function applyTemplate(tplId) {
     renderContentBuilder();
     if (state.showContributors) renderContribSidebar();
     updateSaveButtonState();
+    clearOutput();
 }
 
 function updateDetailsFields() {
@@ -273,6 +274,15 @@ function updateContribSidebarVisibility() {
 function updateSaveButtonState() {
     const btn = document.getElementById('btn-save-layout');
     btn.disabled = !hasBlocks();
+}
+
+function clearOutput() {
+    const sec = document.getElementById('output-section');
+    sec.classList.remove('visible');
+    const html = document.getElementById('out-html');
+    const json = document.getElementById('out-json');
+    if (html) html.value = '';
+    if (json) json.value = '';
 }
 
 function renderContribSidebar() {
@@ -347,6 +357,7 @@ function renderContentBuilder() {
 
     html += '<div class="add-block-bar">'
         + '<button class="btn-add" data-add="paragraph">+ Paragraph</button>'
+        + '<button class="btn-add" data-add="section-heading">+ Section Heading</button>'
         + '<button class="btn-add" data-add="image">+ Image</button>'
         + '<button class="btn-add" data-add="youtube-inline">+ YouTube Embed</button>'
         + '<button class="btn-add" data-add="slideshow">+ Slideshow</button>'
@@ -369,6 +380,10 @@ function renderBlock(b, i) {
     if (b.type === 'paragraph') {
         badge = '<span class="block-type-badge">Paragraph</span>';
         bodyHtml = '<textarea data-field="text" rows="4" placeholder="Write your paragraph here...">' + escHtml(b.text) + '</textarea>';
+
+    } else if (b.type === 'section-heading') {
+        badge = '<span class="block-type-badge type-section-heading">Section Heading</span>';
+        bodyHtml = '<input type="text" data-field="text" value="' + escHtml(b.text) + '" placeholder="Section heading…">';
 
     } else if (b.type === 'image') {
         badge = '<span class="block-type-badge type-image">Image</span>';
@@ -423,7 +438,7 @@ function syncBlocksFromDOM() {
         const i = Number(blockEl.dataset.blockIdx);
         const b = state.blocks[i];
         if (!b) return;
-        if (b.type === 'paragraph') {
+        if (b.type === 'paragraph' || b.type === 'section-heading') {
             const ta = blockEl.querySelector('[data-field="text"]');
             if (ta) b.text = ta.value;
         } else if (b.type === 'image') {
@@ -449,12 +464,13 @@ function initEvents() {
             const type = addBtn.dataset.add;
             const defaults = {
                 'paragraph':      { type: 'paragraph', text: '' },
+                'section-heading':{ type: 'section-heading', text: '' },
                 'image':          { type: 'image', url: '', alt: '', caption: '' },
                 'youtube-inline': { type: 'youtube-inline', url: '' },
                 'slideshow':      { type: 'slideshow', slides: [{ url: '', alt: '' }] }
             };
             const newBlock = defaults[type];
-            if (newBlock) { syncBlocksFromDOM(); state.blocks.push(JSON.parse(JSON.stringify(newBlock))); renderContentBuilder(); }
+            if (newBlock) { syncBlocksFromDOM(); state.blocks.push(JSON.parse(JSON.stringify(newBlock))); renderContentBuilder(); clearOutput(); }
             return;
         }
 
@@ -463,7 +479,7 @@ function initEvents() {
         if (removeBtn) {
             syncBlocksFromDOM();
             state.blocks.splice(Number(removeBtn.dataset.removeBlock), 1);
-            renderContentBuilder(); return;
+            renderContentBuilder(); clearOutput(); return;
         }
 
         // Move up
@@ -687,6 +703,8 @@ function blockToBodyHtml(b, indent) {
     const px = indent || '                    ';
     if (b.type === 'paragraph') {
         return px + '<p>' + escHtml(b.text) + '</p>';
+    } else if (b.type === 'section-heading') {
+        return px + '<h2 class="blog-section-heading">' + escHtml(b.text) + '</h2>';
     } else if (b.type === 'image') {
         const src = b.url || PLACEHOLDER_IMG;
         const cap = b.caption ? '\n' + px + '    <figcaption>' + escHtml(b.caption) + '</figcaption>' : '';
@@ -745,37 +763,57 @@ function buildContributorSidebar() {
         + '                </aside>';
 }
 
-function buildTwoColSection(colA, colB) {
+function spaces(n) { return new Array(n + 1).join(' '); }
+
+function buildTwoColAt(items, baseSpaces) {
+    const colA = items.filter(function(b) { return b.col === 'A'; });
+    const colB = items.filter(function(b) { return b.col === 'B'; });
+    const rowSp = baseSpaces + 4;
+    const cellSp = rowSp + 4;
+    const blockSp = cellSp + 4;
     const count = Math.max(colA.length, colB.length);
     const rows = [];
     for (var i = 0; i < count; i++) {
-        const left  = colA[i] ? blockToBodyHtml(colA[i],  '                            ') : '';
-        const right = colB[i] ? blockToBodyHtml(colB[i], '                            ') : '';
-        rows.push('                    <div class="blog-row">\n'
-            + '                        <div class="blog-row-text">\n' + left + '\n                        </div>\n'
-            + '                        <div class="blog-row-media">\n' + right + '\n                        </div>\n'
-            + '                    </div>');
+        const left  = colA[i] ? blockToBodyHtml(colA[i], spaces(blockSp)) : '';
+        const right = colB[i] ? blockToBodyHtml(colB[i], spaces(blockSp)) : '';
+        rows.push(spaces(rowSp) + '<div class="blog-row">\n'
+            + spaces(cellSp) + '<div class="blog-row-text">\n' + left + '\n' + spaces(cellSp) + '</div>\n'
+            + spaces(cellSp) + '<div class="blog-row-media">\n' + right + '\n' + spaces(cellSp) + '</div>\n'
+            + spaces(rowSp) + '</div>');
     }
-    return '                <div class="blog-two-col">\n' + rows.join('\n\n') + '\n                </div>';
+    return spaces(baseSpaces) + '<div class="blog-two-col">\n' + rows.join('\n\n') + '\n' + spaces(baseSpaces) + '</div>';
 }
 
-function buildContentStr(colA, colB, body, hasSidebar, hasTwoCol) {
-    const blogBodyHtml = body.map(function(b) { return blockToBodyHtml(b); }).join('\n\n');
-    let content = '';
+// Walk blocks in order, grouping consecutive col-assigned blocks into two-col
+// segments. Preserves the block stack order in the generated HTML.
+function buildBodyInner(blocks, blockSpaces) {
+    const segments = [];
+    let current = null;
+    blocks.forEach(function(b) {
+        const segType = b.col ? 'col' : 'full';
+        if (!current || current.type !== segType) {
+            current = { type: segType, items: [] };
+            segments.push(current);
+        }
+        current.items.push(b);
+    });
+    return segments.map(function(seg) {
+        if (seg.type === 'full') {
+            return seg.items.map(function(b) { return blockToBodyHtml(b, spaces(blockSpaces)); }).join('\n\n');
+        }
+        return buildTwoColAt(seg.items, blockSpaces);
+    }).join('\n\n');
+}
 
+function buildContentStr(blocks, hasSidebar) {
     if (hasSidebar) {
-        let bodyContent = blogBodyHtml;
-        if (hasTwoCol) bodyContent += '\n\n' + buildTwoColSection(colA, colB).replace(/^                /gm, '                    ');
-        content += '\n\n                <div class="blog-layout">\n'
-            + '                    <div class="blog-body">\n' + bodyContent + '\n                    </div>\n\n'
-            + buildContributorSidebar() + '\n                </div>';
-    } else if (hasTwoCol && body.length === 0) {
-        content += '\n\n' + buildTwoColSection(colA, colB);
-    } else {
-        content += '\n\n                <div class="blog-body">\n' + blogBodyHtml + '\n                </div>';
-        if (hasTwoCol) content += '\n\n' + buildTwoColSection(colA, colB);
+        const inner = buildBodyInner(blocks, 24);
+        return '\n\n' + spaces(16) + '<div class="blog-layout">\n'
+            + spaces(20) + '<div class="blog-body">\n' + inner + '\n' + spaces(20) + '</div>\n\n'
+            + buildContributorSidebar() + '\n' + spaces(16) + '</div>';
     }
-    return content;
+    const inner = buildBodyInner(blocks, 20);
+    return '\n\n' + spaces(16) + '<div class="blog-body">\n' + inner + '\n' + spaces(16) + '</div>';
 }
 
 function buildFullHTML() {
@@ -784,20 +822,14 @@ function buildFullHTML() {
     const author     = getVal('f-author');
     const date       = getVal('f-date');
 
-    const colA = state.blocks.filter(function(b) { return b.col === 'A'; });
-    const colB = state.blocks.filter(function(b) { return b.col === 'B'; });
-    const body = state.blocks.filter(function(b) { return !b.col; });
-
     const hasSidebar = state.showContributors && state.contributors.length > 0;
-    const hasTwoCol  = colA.length > 0 || colB.length > 0;
-    const allBlocks  = state.blocks.concat(colA).concat(colB);
-    const needsSlideshow = state.settings.hasSlideshowCss || allBlocks.some(function(b) { return b.type === 'slideshow'; });
+    const needsSlideshow = state.settings.hasSlideshowCss || state.blocks.some(function(b) { return b.type === 'slideshow'; });
 
     const so = '<' + 'script', sc = '</' + 'script>';
     const slideshowCss = needsSlideshow ? '\n    <link rel="stylesheet" href="../css/slideshow.css">' : '';
     const slideshowJs  = needsSlideshow ? '\n    ' + so + ' src="../js/Slideshow.js">' + sc : '';
 
-    const content = buildContentStr(colA, colB, body, hasSidebar, hasTwoCol);
+    const content = buildContentStr(state.blocks, hasSidebar);
 
     return tpl
         .replace('{{PAGE_TITLE}}', escHtml(title))

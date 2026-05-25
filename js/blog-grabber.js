@@ -199,7 +199,7 @@ function getPageSize(desktopSize, mobileSize) {
     return window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`).matches ? mobileSize : desktopSize;
 }
 
-function initListingSection({ posts, gridEl, searchEl, filterEl, paginationEl, pageSize = 9, mobilePageSize = null, cardRenderer = renderNewsCard }) {
+function initListingSection({ posts, gridEl, searchEl, filterEl, paginationEl, pageSize = 9, mobilePageSize = null, cardRenderer = renderNewsCard, urlParam = null }) {
     const root = getRoot();
     const sorted = sortNewestFirst(posts);
     let currentPage = 1;
@@ -207,6 +207,24 @@ function initListingSection({ posts, gridEl, searchEl, filterEl, paginationEl, p
     let typeFilter = 'all';
     const effectiveMobile = mobilePageSize ?? pageSize;
     let activePageSize = getPageSize(pageSize, effectiveMobile);
+
+    function readPageFromUrl() {
+        if (!urlParam) return 1;
+        const n = parseInt(new URLSearchParams(window.location.search).get(urlParam), 10);
+        return (Number.isInteger(n) && n > 0) ? n : 1;
+    }
+
+    function writePageToUrl(page, mode) {
+        if (!urlParam) return;
+        const url = new URL(window.location.href);
+        if (page > 1) url.searchParams.set(urlParam, String(page));
+        else url.searchParams.delete(urlParam);
+        if (url.href === window.location.href) return;
+        if (mode === 'push') window.history.pushState({ [urlParam]: page }, '', url.href);
+        else window.history.replaceState({ [urlParam]: page }, '', url.href);
+    }
+
+    currentPage = readPageFromUrl();
 
     function getFiltered() {
         return sorted.filter(p => {
@@ -220,6 +238,7 @@ function initListingSection({ posts, gridEl, searchEl, filterEl, paginationEl, p
         const filtered = getFiltered();
         const totalPages = Math.max(1, Math.ceil(filtered.length / activePageSize));
         if (currentPage > totalPages) currentPage = totalPages;
+        if (currentPage < 1) currentPage = 1;
 
         const start = (currentPage - 1) * activePageSize;
         const pageItems = filtered.slice(start, start + activePageSize);
@@ -234,6 +253,7 @@ function initListingSection({ posts, gridEl, searchEl, filterEl, paginationEl, p
         }
 
         renderPagination(totalPages);
+        writePageToUrl(currentPage, 'replace');
     }
 
     function renderPagination(totalPages) {
@@ -249,6 +269,7 @@ function initListingSection({ posts, gridEl, searchEl, filterEl, paginationEl, p
             if (opts.disabled) btn.disabled = true;
             btn.addEventListener('click', () => {
                 currentPage = page;
+                writePageToUrl(currentPage, 'push');
                 renderGrid();
             });
             return btn;
@@ -314,6 +335,15 @@ function initListingSection({ posts, gridEl, searchEl, filterEl, paginationEl, p
         renderGrid();
     });
 
+    if (urlParam) {
+        window.addEventListener('popstate', () => {
+            const nextPage = readPageFromUrl();
+            if (nextPage === currentPage) return;
+            currentPage = nextPage;
+            renderGrid();
+        });
+    }
+
     renderGrid();
 }
 
@@ -340,7 +370,8 @@ async function populateListingPage() {
             filterEl,
             paginationEl,
             pageSize: key === 'combined' ? 9 : 6,
-            cardRenderer: key === 'combined' ? renderMiniCard : renderNewsCard
+            cardRenderer: key === 'combined' ? renderMiniCard : renderNewsCard,
+            urlParam: 'page'
         });
     });
 
