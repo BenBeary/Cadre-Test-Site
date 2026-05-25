@@ -25,6 +25,12 @@
             "thumbnail": "images/misc/CAO-placeholder.png"
         },
         {
+            "href": "Announcements-Blogs/test-post.html",
+            "title": "",
+            "date": "",
+            "thumbnail": ""
+        },
+        {
             "href": "Announcements-Blogs/template-blog-Slideshow.html",
             "title": "Basic Blog Slideshow",
             "date": "06-10-2026",
@@ -34,6 +40,25 @@
     "events": [
         {
             "href": "Announcements-Blogs/template-event.html",
+            "title": "Event",
+            "date": "06-18-2026",
+            "end_date": "06-21-2026",
+            "thumbnail": "images/misc/CAO-placeholder.png"
+        },
+        {
+            "href": "Announcements-Blogs/test-post.html",
+            "title": "Testing Post Generation",
+            "date": "05-24-2026",
+            "thumbnail": ""
+        },
+        {
+            "href": "Announcements-Blogs/test-two-post.html",
+            "title": "",
+            "date": "05-24-2026",
+            "thumbnail": ""
+        },
+        {
+            "href": "Announcements-Blogs/post.html",
             "title": "Event",
             "date": "06-18-2026",
             "end_date": "06-21-2026",
