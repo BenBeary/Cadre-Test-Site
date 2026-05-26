@@ -63,7 +63,9 @@
 
 /* Sign-in is benign — override the destructive-red confirm-button color used
    by the other (template-switch / clear-post) modals. */
-#auth-modal-overlay .btn-modal-confirm { background: var(--accent); }
-#auth-modal-overlay .btn-modal-confirm:hover { opacity: 0.9; }
+#auth-modal-overlay .btn-modal-confirm,
+#restricted-modal-overlay .btn-modal-confirm { background: var(--accent); }
+#auth-modal-overlay .btn-modal-confirm:hover,
+#restricted-modal-overlay .btn-modal-confirm:hover { opacity: 0.9; }
 #auth-modal-overlay .btn-modal-confirm:disabled { opacity: 0.5; cursor: default; }
 

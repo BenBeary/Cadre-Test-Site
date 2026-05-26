@@ -9,8 +9,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/postGen-style.css">
     <link rel="stylesheet" href="AuthManager/auth.css">
+    <link rel="stylesheet" href="AdminTools/admin-tools.css">
 </head>
-<body>
+<body data-page-role="admin">
 
 <header class="site-header">
     <div class="logo"><span>CADRE</span> Alumni</div>
@@ -131,6 +132,15 @@
         </div>
 
     </div><!-- end main-area -->
+
+    <!-- Right-side admin tools sidebar (admin page only) -->
+    <aside class="admin-tools-sidebar" id="admin-tools-sidebar">
+        <div class="sidebar-section-title">Admin Tools</div>
+        <div class="admin-tools-list" id="admin-tools-list"></div>
+        <div class="admin-tools-empty" id="admin-tools-empty">
+            No tools yet — more coming soon.
+        </div>
+    </aside>
 
 </div><!-- end app-layout -->
 

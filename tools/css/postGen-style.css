@@ -605,3 +605,21 @@ textarea { resize: vertical; min-height: 80px; }
     background: #fff;
 }
 body.preview-open { overflow: hidden; }
+
+/* ---- 720p / small-laptop scale-down ---- */
+/* Lives at the end of the file so its rules win the cascade over the base
+   .template-sidebar and body rules above.
+   `zoom: 0.8` shrinks the whole tool to 80% on short viewports so the three-
+   column layout fits comfortably. Because `zoom` scales geometry AFTER layout,
+   a child laid out at `height: 100vh` only paints 80% of the viewport — so
+   heights and min-heights inside this block get over-sized by 1/0.8 = 125%
+   to compensate. Larger displays bypass this block and keep full size. */
+@media (max-height: 800px) {
+    body {
+        zoom: 0.8;
+        min-height: calc(100vh / 0.8);
+    }
+    .template-sidebar {
+        height: calc(100vh / 0.8 - var(--header-h));
+    }
+}
