@@ -1,4 +1,16 @@
 {
+  "socialPlatforms": [
+    { "value": "bluesky",   "label": "Bluesky",         "icon": "icon-bluesky" },
+    { "value": "discord",   "label": "Discord",         "icon": "icon-discord" },
+    { "value": "facebook",  "label": "Facebook",        "icon": "icon-facebook" },
+    { "value": "instagram", "label": "Instagram",       "icon": "icon-instagram" },
+    { "value": "itchdotio", "label": "Itch.io",         "icon": "icon-itchdotio" },
+    { "value": "linkedin",  "label": "LinkedIn",        "icon": "icon-linkedin" },
+    { "value": "linktree",  "label": "Linktree",        "icon": "icon-linktree" },
+    { "value": "x",         "label": "X / Twitter",     "icon": "icon-x" },
+    { "value": "youtube",   "label": "YouTube",         "icon": "icon-youtube" },
+    { "value": "other",     "label": "Website / Other", "icon": "icon-link" }
+  ],
   "templates": [
     {
       "id": "blank",

@@ -1,32 +1,6 @@
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const SOCIAL_PLATFORMS = [
-    { value: 'bluesky',   label: 'Bluesky',         icon: 'icon-bluesky' },
-    { value: 'discord',   label: 'Discord',         icon: 'icon-discord' },
-    { value: 'facebook',  label: 'Facebook',        icon: 'icon-facebook' },
-    { value: 'instagram', label: 'Instagram',       icon: 'icon-instagram' },
-    { value: 'itchdotio', label: 'Itch.io',         icon: 'icon-itchdotio' },
-    { value: 'linkedin',  label: 'LinkedIn',        icon: 'icon-linkedin' },
-    { value: 'linktree',  label: 'Linktree',        icon: 'icon-linktree' },
-    { value: 'x',         label: 'X / Twitter',     icon: 'icon-x' },
-    { value: 'youtube',   label: 'YouTube',         icon: 'icon-youtube' },
-    { value: 'other',     label: 'Website / Other', icon: 'icon-link' }
-];
-
-// ─── State ────────────────────────────────────────────────────────────────────
-
-const state = {
-    templateId: null,
-    settings: { isEvent: false, hasSlideshowCss: false },
-    blocks: [],          // paragraph | image | youtube-inline | slideshow, each may have col: 'A'|'B'
-    contributors: [],    // [{name, photo, socials:[{platform,url}]}]
-    showContributors: false,
-    pendingTemplate: null,
-};
-
-let templates = [];
-let baseTemplate = null;
-let filenameAutoFill = true;
+// Editor UI, event handling, save/load, and init for the post generator.
+// State, constants, and the BLOCK_TYPES registry live in post-gen-data.js.
+// HTML/JSON output lives in post-gen-output.js.
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
 
@@ -100,119 +74,45 @@ function getFilename() {
     return (slug || 'untitled-blog-post') + '.html';
 }
 
-// ─── Base Template ────────────────────────────────────────────────────────────
+function setDefaultDate() {
+    const d = new Date();
+    const iso = d.getFullYear() + '-'
+        + String(d.getMonth() + 1).padStart(2, '0') + '-'
+        + String(d.getDate()).padStart(2, '0');
+    document.getElementById('f-date').value = iso;
+}
 
-function getBuiltinBaseTemplate() {
-    const so = '<' + 'script', sc = '</' + 'script>';
-    return '<!DOCTYPE html>\n'
-        + '<html lang="en">\n'
-        + '<head>\n'
-        + '    <meta charset="UTF-8">\n'
-        + '    <meta name="viewport" content="width=device-width, initial-scale=1.0">\n'
-        + '    <title>{{PAGE_TITLE}} - CADRE Alumni</title>\n'
-        + '    <link rel="preconnect" href="https://fonts.googleapis.com">\n'
-        + '    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n'
-        + '    <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">\n'
-        + '    <link rel="stylesheet" href="../css/style.css">\n'
-        + '    <link rel="stylesheet" href="../css/blog-style.css">{{SLIDESHOW_CSS}}\n'
-        + '    ' + so + '>\n'
-        + '        (function () {\n'
-        + '            var stored = localStorage.getItem(\'theme\');\n'
-        + '            document.documentElement.setAttribute(\'data-theme\', stored || \'dark\');\n'
-        + '        })();\n'
-        + '    ' + sc + '\n'
-        + '</head>\n'
-        + '<body data-page="events" data-root="../">\n'
-        + '    <div class="bg-squares bg-squares-left" aria-hidden="true"></div>\n'
-        + '    <div class="bg-squares bg-squares-right" aria-hidden="true"></div>\n\n'
-        + '    <div id="site-header"></div>\n\n'
-        + '    <main>\n'
-        + '        <section class="blog-section">\n'
-        + '            <div class="blog-inner">\n'
-        + '                <header class="blog-header">\n'
-        + '                    <h1>{{POST_TITLE}}</h1>\n'
-        + '                    <div class="blog-meta">\n'
-        + '                        <span class="blog-meta-row"><span class="blog-meta-label">Date:</span><span class="blog-meta-value">{{POST_DATE}}</span></span>\n'
-        + '                        <span class="blog-meta-row"><span class="blog-meta-label">Written by:</span><span class="blog-meta-value">{{POST_AUTHOR}}</span></span>\n'
-        + '                    </div>\n'
-        + '                </header>{{POST_CONTENT}}\n\n'
-        + '            </div>\n'
-        + '        </section>\n'
-        + '    </main>\n\n'
-        + '    <div id="site-footer"></div>\n\n'
-        + '    ' + so + ' src="../js/partials.js">' + sc + '\n'
-        + '    ' + so + ' src="../js/bg-squares.js">' + sc + '\n'
-        + '    ' + so + ' src="../js/image-modal.js">' + sc + '{{SLIDESHOW_JS}}\n'
-        + '    ' + so + ' src="../js/main.js">' + sc + '\n'
-        + '</body>\n'
-        + '</html>';
+// ─── Data loading ─────────────────────────────────────────────────────────────
+
+function stripLiveServerInjection(html) {
+    return html.replace(/\s*<!-- Code injected by live-server -->[\s\S]*?<\/script>\s*/gi, '\n');
+}
+
+function loadTemplates() {
+    fetch('json/template-data.json')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            templates       = data.templates       || BLANK_TEMPLATE_FALLBACK;
+            socialPlatforms = data.socialPlatforms || SOCIAL_PLATFORMS_FALLBACK;
+            renderTemplateNav();
+            applyTemplate('blank');
+        })
+        .catch(function() {
+            templates       = BLANK_TEMPLATE_FALLBACK;
+            socialPlatforms = SOCIAL_PLATFORMS_FALLBACK;
+            renderTemplateNav();
+            applyTemplate('blank');
+        });
 }
 
 function loadBaseTemplate() {
     fetch('../Announcements-Blogs/base-template.html')
         .then(function(r) { return r.text(); })
         .then(function(text) { baseTemplate = stripLiveServerInjection(text); })
-        .catch(function() { baseTemplate = getBuiltinBaseTemplate(); });
+        .catch(function() { baseTemplate = null; /* buildFullHTML alerts the user */ });
 }
 
-function stripLiveServerInjection(html) {
-    return html.replace(/\s*<!-- Code injected by live-server -->[\s\S]*?<\/script>\s*/gi, '\n');
-}
-
-// ─── Template Loading ──────────────────────────────────────────────────────────
-
-function getBuiltinTemplates() {
-    return [
-        { id: 'blank', name: 'Blank', icon: '📄', desc: 'Start fresh with no pre-filled blocks.',
-          settings: { isEvent: false, hasSlideshowCss: false, showContributors: false },
-          blocks: [], contributors: [] },
-
-        { id: 'basic', name: 'Basic Blog Post', icon: '✍️', desc: 'Title, author, paragraphs, and images.',
-          settings: { isEvent: false, hasSlideshowCss: false, showContributors: false },
-          blocks: [ {type:'paragraph',text:''}, {type:'image',url:'',alt:'',caption:''}, {type:'paragraph',text:''} ],
-          contributors: [] },
-
-        { id: 'event', name: 'Event Post', icon: '📅', desc: 'Same as a blog post, for event announcements.',
-          settings: { isEvent: true, hasSlideshowCss: false, showContributors: false },
-          blocks: [ {type:'paragraph',text:''}, {type:'image',url:'',alt:'',caption:''}, {type:'paragraph',text:''} ],
-          contributors: [] },
-
-        { id: 'youtube', name: 'YouTube Video', icon: '▶️', desc: 'YouTube video at the top, then text below.',
-          settings: { isEvent: false, hasSlideshowCss: false, showContributors: false },
-          blocks: [ {type:'youtube-inline',url:''}, {type:'paragraph',text:''} ],
-          contributors: [] },
-
-        { id: 'contributors', name: 'Blog + Contributors', icon: '🤝', desc: 'Blog content with a contributor sidebar.',
-          settings: { isEvent: false, hasSlideshowCss: false, showContributors: true },
-          blocks: [ {type:'paragraph',text:''}, {type:'image',url:'',alt:'',caption:''}, {type:'paragraph',text:''} ],
-          contributors: [ {name:'',photo:'',socials:[]} ] },
-
-        { id: 'yt-people', name: 'YouTube + Contributors', icon: '🎬', desc: 'YouTube header and a contributor sidebar.',
-          settings: { isEvent: false, hasSlideshowCss: false, showContributors: true },
-          blocks: [ {type:'paragraph',text:''}, {type:'youtube-inline',url:''}, {type:'paragraph',text:''} ],
-          contributors: [ {name:'',photo:'',socials:[]} ] },
-
-        { id: 'two-col', name: 'Two-Column Layout', icon: '🗂️', desc: 'Alternating rows of text and image.',
-          settings: { isEvent: false, hasSlideshowCss: false, showContributors: false },
-          blocks: [
-              {type:'paragraph',text:'',col:'A'}, {type:'image',url:'',alt:'',caption:'',col:'B'},
-              {type:'paragraph',text:'',col:'A'}, {type:'image',url:'',alt:'',caption:'',col:'B'}
-          ],
-          contributors: [] },
-
-        { id: 'slideshow', name: 'Slideshow Post', icon: '🖼️', desc: 'Blog post with an image slideshow carousel.',
-          settings: { isEvent: false, hasSlideshowCss: true, showContributors: false },
-          blocks: [ {type:'paragraph',text:''}, {type:'slideshow',slides:[{url:'',alt:''},{url:'',alt:''}]}, {type:'paragraph',text:''} ],
-          contributors: [] }
-    ];
-}
-
-function loadTemplates() {
-    fetch('json/template-data.json')
-        .then(function(r) { return r.json(); })
-        .then(function(data) { templates = data.templates || getBuiltinTemplates(); renderTemplateNav(); applyTemplate('blank'); })
-        .catch(function() { templates = getBuiltinTemplates(); renderTemplateNav(); applyTemplate('blank'); });
-}
+// ─── Template Nav & Selection ─────────────────────────────────────────────────
 
 function renderTemplateNav() {
     const nav = document.getElementById('template-nav');
@@ -226,8 +126,6 @@ function renderTemplateNav() {
     });
     nav.innerHTML = html;
 }
-
-// ─── Template Selection ────────────────────────────────────────────────────────
 
 document.getElementById('template-nav').addEventListener('click', function(e) {
     const btn = e.target.closest('[data-tpl-id]');
@@ -260,7 +158,7 @@ function updateDetailsFields() {
     document.getElementById('field-end-date').style.display = state.settings.isEvent ? '' : 'none';
 }
 
-// ─── Contributors Sidebar (editor) ───────────────────────────────────────────
+// ─── Editor chrome ────────────────────────────────────────────────────────────
 
 function updateContribSidebarVisibility() {
     const sidebar = document.getElementById('contrib-sidebar');
@@ -272,18 +170,18 @@ function updateContribSidebarVisibility() {
 }
 
 function updateSaveButtonState() {
-    const btn = document.getElementById('btn-save-layout');
-    btn.disabled = !hasBlocks();
+    document.getElementById('btn-save-layout').disabled = !hasBlocks();
 }
 
 function clearOutput() {
-    const sec = document.getElementById('output-section');
-    sec.classList.remove('visible');
+    document.getElementById('output-section').classList.remove('visible');
     const html = document.getElementById('out-html');
     const json = document.getElementById('out-json');
     if (html) html.value = '';
     if (json) json.value = '';
 }
+
+// ─── Contributors Sidebar ─────────────────────────────────────────────────────
 
 function renderContribSidebar() {
     const sidebar = document.getElementById('contrib-sidebar');
@@ -297,7 +195,7 @@ function renderContribSidebar() {
 function renderContributor(c, i) {
     const isFirst = i === 0, isLast = i === state.contributors.length - 1;
     const socialsHtml = (c.socials || []).map(function(s, si) {
-        const opts = SOCIAL_PLATFORMS.map(function(p) {
+        const opts = socialPlatforms.map(function(p) {
             return '<option value="' + p.value + '"' + (s.platform === p.value ? ' selected' : '') + '>' + p.label + '</option>';
         }).join('');
         return '<div class="social-item" data-social-idx="' + si + '">'
@@ -355,14 +253,11 @@ function renderContentBuilder() {
     state.blocks.forEach(function(b, i) { html += renderBlock(b, i); });
     html += '</div>';
 
-    html += '<div class="add-block-bar">'
-        + '<button class="btn-add" data-add="paragraph">+ Paragraph</button>'
-        + '<button class="btn-add" data-add="section-heading">+ Section Heading</button>'
-        + '<button class="btn-add" data-add="divider">+ Divider</button>'
-        + '<button class="btn-add" data-add="image">+ Image</button>'
-        + '<button class="btn-add" data-add="youtube-inline">+ YouTube Embed</button>'
-        + '<button class="btn-add" data-add="slideshow">+ Slideshow</button>'
-        + '</div>';
+    html += '<div class="add-block-bar">';
+    Object.keys(BLOCK_TYPES).forEach(function(type) {
+        html += '<button class="btn-add" data-add="' + type + '">+ ' + BLOCK_TYPES[type].label + '</button>';
+    });
+    html += '</div>';
 
     el.innerHTML = html;
     updateSaveButtonState();
@@ -370,58 +265,14 @@ function renderContentBuilder() {
 
 function renderBlock(b, i) {
     const isFirst = i === 0, isLast = i === state.blocks.length - 1;
+    const def = BLOCK_TYPES[b.type];
+    if (!def) return ''; // unknown block type
 
-    // Two-column buttons: A and B, each independently toggleable
     const colAClass = 'btn-icon btn-col-toggle' + (b.col === 'A' ? ' col-active-a' : '');
     const colBClass = 'btn-icon btn-col-toggle' + (b.col === 'B' ? ' col-active-b' : '');
     const colBadge  = b.col ? '<span class="col-badge col-' + b.col.toLowerCase() + '">Col ' + b.col + '</span>' : '';
-
-    let badge = '', bodyHtml = '';
-
-    if (b.type === 'paragraph') {
-        badge = '<span class="block-type-badge">Paragraph</span>';
-        bodyHtml = '<textarea data-field="text" rows="4" placeholder="Write your paragraph here...">' + escHtml(b.text) + '</textarea>';
-
-    } else if (b.type === 'section-heading') {
-        badge = '<span class="block-type-badge type-section-heading">Section Heading</span>';
-        bodyHtml = '<input type="text" data-field="text" value="' + escHtml(b.text) + '" placeholder="Section heading…">';
-
-    } else if (b.type === 'divider') {
-        badge = '<span class="block-type-badge type-divider">Divider</span>';
-        bodyHtml = '<div class="divider-preview" aria-hidden="true"></div>';
-
-    } else if (b.type === 'image') {
-        badge = '<span class="block-type-badge type-image">Image</span>';
-        bodyHtml = '<div class="field">'
-            + '<label>Image Path</label>'
-            + '<input type="text" data-field="url" value="' + escHtml(b.url) + '" placeholder="e.g. images/events/my-photo.jpg">'
-            + '<div class="field-hint">Path is relative to the site root. Leave blank to use the placeholder image.</div>'
-            + '</div>'
-            + '<div class="field-grid">'
-            + '<div class="field"><label>Alt Text</label><input type="text" data-field="alt" value="' + escHtml(b.alt) + '" placeholder="Brief description"></div>'
-            + '<div class="field"><label>Caption (optional)</label><input type="text" data-field="caption" value="' + escHtml(b.caption) + '" placeholder="Caption below image"></div>'
-            + '</div>';
-
-    } else if (b.type === 'youtube-inline') {
-        badge = '<span class="block-type-badge type-youtube">YouTube Embed</span>';
-        bodyHtml = '<div class="field"><label>YouTube URL</label>'
-            + '<input type="url" data-field="url" value="' + escHtml(b.url) + '" placeholder="https://www.youtube.com/watch?v=...">'
-            + '</div>';
-
-    } else if (b.type === 'slideshow') {
-        badge = '<span class="block-type-badge type-slideshow">Slideshow</span>';
-        let slidesHtml = '<div class="slide-list" id="slide-list-' + i + '">';
-        (b.slides || []).forEach(function(s, si) {
-            slidesHtml += '<div class="slide-item" data-slide-idx="' + si + '">'
-                + '<div class="slide-num">' + (si + 1) + '</div>'
-                + '<input type="text" data-slide-url="' + si + '" value="' + escHtml(s.url) + '" placeholder="Image path…" style="flex:2">'
-                + '<input type="text" data-slide-alt="' + si + '" value="' + escHtml(s.alt) + '" placeholder="Alt text" style="flex:1">'
-                + '<button class="btn-icon danger" data-remove-slide="' + si + '" title="Remove">✕</button>'
-                + '</div>';
-        });
-        slidesHtml += '</div><div class="add-block-bar"><button class="btn-add" data-add-slide="' + i + '">+ Add Slide</button></div>';
-        bodyHtml = slidesHtml;
-    }
+    const badgeCls  = 'block-type-badge' + (def.badgeClass ? ' ' + def.badgeClass : '');
+    const badge     = '<span class="' + badgeCls + '">' + def.label + '</span>';
 
     return '<div class="block-item" data-block-idx="' + i + '" draggable="true">'
         + '<div class="block-header">' + badge + colBadge
@@ -433,51 +284,37 @@ function renderBlock(b, i) {
         + '<button class="btn-icon" data-move-down="' + i + '" title="Move down"' + (isLast ? ' disabled' : '') + '>↓</button>'
         + '<button class="btn-icon danger" data-remove-block="' + i + '" title="Remove">✕</button>'
         + '</div></div>'
-        + '<div class="block-body">' + bodyHtml + '</div>'
+        + '<div class="block-body">' + def.renderBody(b) + '</div>'
         + '</div>';
 }
-
-// ─── DOM → State Sync ─────────────────────────────────────────────────────────
 
 function syncBlocksFromDOM() {
     document.querySelectorAll('[data-block-idx]').forEach(function(blockEl) {
         const i = Number(blockEl.dataset.blockIdx);
         const b = state.blocks[i];
         if (!b) return;
-        if (b.type === 'paragraph' || b.type === 'section-heading') {
-            const ta = blockEl.querySelector('[data-field="text"]');
-            if (ta) b.text = ta.value;
-        } else if (b.type === 'image') {
-            ['url','alt','caption'].forEach(function(f) { const el = blockEl.querySelector('[data-field="' + f + '"]'); if (el) b[f] = el.value; });
-        } else if (b.type === 'youtube-inline') {
-            const el = blockEl.querySelector('[data-field="url"]'); if (el) b.url = el.value;
-        } else if (b.type === 'slideshow') {
-            blockEl.querySelectorAll('[data-slide-url]').forEach(function(el) { b.slides[Number(el.dataset.slideUrl)].url = el.value; });
-            blockEl.querySelectorAll('[data-slide-alt]').forEach(function(el) { b.slides[Number(el.dataset.slideAlt)].alt = el.value; });
-        }
+        const def = BLOCK_TYPES[b.type];
+        if (def) def.syncFromDOM(b, blockEl);
     });
 }
 
-// ─── Event Handling (single attach — fixes multi-copy bug) ───────────────────
+// ─── Block list events ────────────────────────────────────────────────────────
 
 function initEvents() {
     const builder = document.getElementById('content-builder');
 
     builder.addEventListener('click', function(e) {
-        // Add block
+        // Add block (excluding the slideshow's inner add-slide button)
         const addBtn = e.target.closest('[data-add]');
         if (addBtn && !addBtn.hasAttribute('data-add-slide')) {
             const type = addBtn.dataset.add;
-            const defaults = {
-                'paragraph':      { type: 'paragraph', text: '' },
-                'section-heading':{ type: 'section-heading', text: '' },
-                'divider':        { type: 'divider' },
-                'image':          { type: 'image', url: '', alt: '', caption: '' },
-                'youtube-inline': { type: 'youtube-inline', url: '' },
-                'slideshow':      { type: 'slideshow', slides: [{ url: '', alt: '' }] }
-            };
-            const newBlock = defaults[type];
-            if (newBlock) { syncBlocksFromDOM(); state.blocks.push(JSON.parse(JSON.stringify(newBlock))); renderContentBuilder(); clearOutput(); }
+            const def = BLOCK_TYPES[type];
+            if (def) {
+                syncBlocksFromDOM();
+                state.blocks.push(def.defaults());
+                renderContentBuilder();
+                clearOutput();
+            }
             return;
         }
 
@@ -505,7 +342,7 @@ function initEvents() {
             return;
         }
 
-        // Column A toggle (click to assign; click again to unassign)
+        // Column A toggle
         const colABtn = e.target.closest('[data-set-col-a]');
         if (colABtn) {
             syncBlocksFromDOM();
@@ -523,20 +360,20 @@ function initEvents() {
             renderContentBuilder(); return;
         }
 
-        // Add slide inside slideshow block
+        // Slideshow: add slide
         const addSlideBtn = e.target.closest('[data-add-slide]');
         if (addSlideBtn) {
             syncBlocksFromDOM();
-            state.blocks[Number(addSlideBtn.dataset.addSlide)].slides.push({ url: '', alt: '' });
+            const blockIdx = Number(addSlideBtn.closest('[data-block-idx]').dataset.blockIdx);
+            state.blocks[blockIdx].slides.push({ url: '', alt: '' });
             renderContentBuilder(); return;
         }
 
-        // Remove slide
+        // Slideshow: remove slide
         const removeSlideBtn = e.target.closest('[data-remove-slide]');
         if (removeSlideBtn) {
             syncBlocksFromDOM();
-            const blockEl = removeSlideBtn.closest('[data-block-idx]');
-            const blockIdx = Number(blockEl.dataset.blockIdx);
+            const blockIdx = Number(removeSlideBtn.closest('[data-block-idx]').dataset.blockIdx);
             state.blocks[blockIdx].slides.splice(Number(removeSlideBtn.dataset.removeSlide), 1);
             if (state.blocks[blockIdx].slides.length === 0) state.blocks[blockIdx].slides.push({ url: '', alt: '' });
             renderContentBuilder(); return;
@@ -554,7 +391,7 @@ function initEvents() {
 
     // dragstart's e.target is the draggable element (the .block-item itself),
     // not the actual mousedown target. Track mousedown separately so we can
-    // tell whether the drag started from the header bar vs an input/button.
+    // tell whether the drag started from the drag handle vs an input/button.
     builder.addEventListener('mousedown', function(e) { mouseDownEl = e.target; });
 
     builder.addEventListener('dragstart', function(e) {
@@ -616,7 +453,6 @@ function initEvents() {
 }
 
 function initContribEvents() {
-    // Contributors sidebar toggle
     document.getElementById('btn-contrib-toggle').addEventListener('click', function() {
         syncContributorsFromDOM();
         state.showContributors = !state.showContributors;
@@ -624,36 +460,30 @@ function initContribEvents() {
         if (state.showContributors) renderContribSidebar();
     });
 
-    // All contributor sidebar interactions
     document.getElementById('contrib-sidebar').addEventListener('click', function(e) {
-        // Add contributor
         if (e.target.id === 'btn-add-contrib') {
             syncContributorsFromDOM();
             state.contributors.push({ name: '', photo: '', socials: [] });
             renderContribSidebar(); return;
         }
-        // Move up
         const upBtn = e.target.closest('[data-contrib-up]');
         if (upBtn) {
             const n = Number(upBtn.dataset.contribUp);
             if (n > 0) { syncContributorsFromDOM(); const t = state.contributors[n-1]; state.contributors[n-1] = state.contributors[n]; state.contributors[n] = t; renderContribSidebar(); }
             return;
         }
-        // Move down
         const downBtn = e.target.closest('[data-contrib-down]');
         if (downBtn) {
             const n = Number(downBtn.dataset.contribDown);
             if (n < state.contributors.length - 1) { syncContributorsFromDOM(); const t = state.contributors[n+1]; state.contributors[n+1] = state.contributors[n]; state.contributors[n] = t; renderContribSidebar(); }
             return;
         }
-        // Remove contributor
         const removeBtn = e.target.closest('[data-contrib-remove]');
         if (removeBtn) {
             syncContributorsFromDOM();
             state.contributors.splice(Number(removeBtn.dataset.contribRemove), 1);
             renderContribSidebar(); return;
         }
-        // Add social link
         const addSocialBtn = e.target.closest('[data-add-social]');
         if (addSocialBtn) {
             syncContributorsFromDOM();
@@ -662,19 +492,17 @@ function initContribEvents() {
             state.contributors[ci].socials.push({ platform: 'instagram', url: '' });
             renderContribSidebar(); return;
         }
-        // Remove social link
         const removeSocialBtn = e.target.closest('[data-remove-social]');
         if (removeSocialBtn) {
             syncContributorsFromDOM();
-            const contribEl = removeSocialBtn.closest('[data-contrib-idx]');
-            const ci = Number(contribEl.dataset.contribIdx);
+            const ci = Number(removeSocialBtn.closest('[data-contrib-idx]').dataset.contribIdx);
             state.contributors[ci].socials.splice(Number(removeSocialBtn.dataset.removeSocial), 1);
             renderContribSidebar(); return;
         }
     });
 }
 
-// ─── Modal ────────────────────────────────────────────────────────────────────
+// ─── Switch-template confirmation modal ───────────────────────────────────────
 
 function showModal() { document.getElementById('modal-overlay').style.display = 'flex'; }
 function hideModal() { document.getElementById('modal-overlay').style.display = 'none'; }
@@ -693,21 +521,20 @@ function isPostEmpty() {
     if (state.blocks.length > 0) return false;
     if (state.contributors.length > 0) return false;
     if (state.templateId && state.templateId !== 'blank') return false;
-    const ids = ['f-title', 'f-author', 'f-thumbnail', 'f-end-date', 'f-filename'];
-    for (var i = 0; i < ids.length; i++) {
-        if (getVal(ids[i])) return false;
+    for (var i = 0; i < FORM_FIELDS.length; i++) {
+        if (getVal(FORM_FIELDS[i])) return false;
     }
     return true;
 }
 
 function clearPost() {
-    ['f-title', 'f-author', 'f-thumbnail', 'f-end-date', 'f-filename'].forEach(function(id) {
+    FORM_FIELDS.forEach(function(id) {
         const el = document.getElementById(id);
         if (el) el.value = '';
     });
     setDefaultDate();
     filenameAutoFill = true;
-    applyTemplate('blank'); // resets blocks, contributors, template selection, output
+    applyTemplate('blank'); // resets blocks, contributors, template, output
 }
 
 function showClearModal() { document.getElementById('clear-modal-overlay').style.display = 'flex'; }
@@ -733,17 +560,20 @@ document.getElementById('clear-modal-overlay').addEventListener('click', functio
 function getSaveData() {
     syncBlocksFromDOM();
     syncContributorsFromDOM();
+    const fields = {};
+    FORM_FIELDS.forEach(function(id) {
+        // Strip the f- prefix → "f-end-date" becomes "endDate"
+        const key = id.replace(/^f-/, '').replace(/-(.)/g, function(_, c) { return c.toUpperCase(); });
+        fields[key] = getVal(id);
+    });
+    fields.date = getVal('f-date'); // not in FORM_FIELDS list (auto-set, not user-cleared)
     return {
         templateId: state.templateId,
         settings: state.settings,
         blocks: state.blocks,
         contributors: state.contributors,
         showContributors: state.showContributors,
-        fields: {
-            title: getVal('f-title'), author: getVal('f-author'), date: getVal('f-date'),
-            endDate: getVal('f-end-date'), thumbnail: getVal('f-thumbnail'),
-            filename: getVal('f-filename')
-        }
+        fields: fields
     };
 }
 
@@ -761,12 +591,16 @@ function applySaveData(data) {
     renderContentBuilder();
     if (state.showContributors) renderContribSidebar();
     updateSaveButtonState();
+    clearOutput();
     if (data.fields) {
-        var f = data.fields;
-        var s = function(id, v) { var el = document.getElementById(id); if (el && v) el.value = v; };
-        s('f-title', f.title); s('f-author', f.author); s('f-date', f.date);
-        s('f-end-date', f.endDate); s('f-thumbnail', f.thumbnail);
-        s('f-filename', f.filename);
+        const setIfPresent = function(id, v) { const el = document.getElementById(id); if (el && v) el.value = v; };
+        const f = data.fields;
+        setIfPresent('f-title', f.title);
+        setIfPresent('f-author', f.author);
+        setIfPresent('f-date', f.date);
+        setIfPresent('f-end-date', f.endDate);
+        setIfPresent('f-thumbnail', f.thumbnail);
+        setIfPresent('f-filename', f.filename);
     }
 }
 
@@ -795,7 +629,7 @@ async function saveDraftAs() {
             await writable.close();
             return;
         } catch (err) {
-            if (err && err.name === 'AbortError') return; // user cancelled — silent
+            if (err && err.name === 'AbortError') return; // user cancelled
             console.error('Save As failed, falling back to download:', err);
         }
     }
@@ -803,7 +637,6 @@ async function saveDraftAs() {
 }
 
 document.getElementById('btn-save-layout').addEventListener('click', saveDraftAs);
-
 document.getElementById('btn-load-layout').addEventListener('click', function() { document.getElementById('import-file').click(); });
 
 document.getElementById('import-file').addEventListener('change', function() {
@@ -813,195 +646,34 @@ document.getElementById('import-file').addEventListener('change', function() {
     reader.readAsText(file); this.value = '';
 });
 
-// ─── Drag-drop overlay ────────────────────────────────────────────────────────
+// ─── File drag-drop overlay ───────────────────────────────────────────────────
 
-var dragCounter = 0;
-window.addEventListener('dragenter', function(e) {
-    if (e.dataTransfer && e.dataTransfer.types && Array.prototype.indexOf.call(e.dataTransfer.types, 'Files') !== -1) {
-        dragCounter++;
-        document.getElementById('drop-overlay').classList.add('active');
-    }
-});
-window.addEventListener('dragleave', function() {
-    dragCounter--;
-    if (dragCounter <= 0) { dragCounter = 0; document.getElementById('drop-overlay').classList.remove('active'); }
-});
-window.addEventListener('dragover', function(e) { e.preventDefault(); });
-window.addEventListener('drop', function(e) {
-    e.preventDefault();
-    dragCounter = 0;
-    document.getElementById('drop-overlay').classList.remove('active');
-    const file = e.dataTransfer && e.dataTransfer.files[0];
-    if (!file || !file.name.endsWith('.json')) return;
-    const reader = new FileReader();
-    reader.onload = function(ev) { try { applySaveData(JSON.parse(ev.target.result)); } catch(err) { alert('Could not read save file.'); } };
-    reader.readAsText(file);
-});
+(function initFileDropOverlay() {
+    let dragCounter = 0;
+    const overlay = document.getElementById('drop-overlay');
 
-// ─── HTML Generation ──────────────────────────────────────────────────────────
-
-const PLACEHOLDER_IMG = 'images/misc/CAO-placeholder.png';
-
-function blockToBodyHtml(b, indent) {
-    const px = indent || '                    ';
-    if (b.type === 'paragraph') {
-        return px + '<p>' + escHtml(b.text) + '</p>';
-    } else if (b.type === 'section-heading') {
-        return px + '<h2 class="blog-section-heading">' + escHtml(b.text) + '</h2>';
-    } else if (b.type === 'divider') {
-        return px + '<hr class="blog-divider">';
-    } else if (b.type === 'image') {
-        const src = b.url || PLACEHOLDER_IMG;
-        const cap = b.caption ? '\n' + px + '    <figcaption>' + escHtml(b.caption) + '</figcaption>' : '';
-        return px + '<figure class="blog-figure">\n' + px + '    <img src="../' + escHtml(src) + '" alt="' + escHtml(b.alt) + '">' + cap + '\n' + px + '</figure>';
-    } else if (b.type === 'youtube-inline') {
-        const vid = extractYouTubeId(b.url);
-        const embedUrl = vid ? 'https://www.youtube.com/embed/' + vid : escHtml(b.url);
-        return px + '<div class="blog-video">\n'
-            + px + '    <div class="blog-video-frame">\n'
-            + px + '        <iframe src="' + embedUrl + '" title="Video" frameborder="0"'
-            + ' allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"'
-            + ' referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>\n'
-            + px + '    </div>\n' + px + '</div>';
-    } else if (b.type === 'slideshow') {
-        const slidesHtml = (b.slides || []).map(function(s, si) {
-            const src = s.url || PLACEHOLDER_IMG;
-            return '                                <img class="slideshow-slide' + (si === 0 ? ' is-active' : '') + '" src="../'
-                + escHtml(src) + '" alt="' + escHtml(s.alt || 'Slide ' + (si + 1)) + '">';
-        }).join('\n');
-        return px + '<div class="blog-slideshow">\n'
-            + px + '    <div class="slideshow" data-autoplay-interval="5000">\n'
-            + px + '        <button class="slideshow-arrow slideshow-arrow-prev" aria-label="Previous slide">\n'
-            + px + '            <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><polyline points="15 4 7 12 15 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>\n'
-            + px + '        </button>\n'
-            + px + '        <div class="slideshow-viewport">\n' + slidesHtml + '\n' + px + '        </div>\n'
-            + px + '        <button class="slideshow-arrow slideshow-arrow-next" aria-label="Next slide">\n'
-            + px + '            <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><polyline points="9 4 17 12 9 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>\n'
-            + px + '        </button>\n'
-            + px + '        <div class="slideshow-dots" role="tablist" aria-label="Select slide"></div>\n'
-            + px + '    </div>\n' + px + '</div>';
-    }
-    return '';
-}
-
-function buildContributorSidebar() {
-    const cards = state.contributors.map(function(c) {
-        const socialsHtml = (c.socials || []).filter(function(s) { return s.url; }).map(function(s) {
-            const platform = SOCIAL_PLATFORMS.find(function(p) { return p.value === s.platform; });
-            const iconId  = platform ? platform.icon : null;
-            const label   = platform ? platform.label : (s.platform || 'Link');
-            const iconSvg = iconId
-                ? '<svg aria-hidden="true"><use href="../images/misc/social-icons.svg#' + iconId + '"/></svg>'
-                : '🔗';
-            return '                                <a href="' + escHtml(s.url) + '" class="social-icon contributor-social" aria-label="' + escHtml(label) + '">' + iconSvg + '</a>';
-        }).join('\n');
-        const photoSrc = c.photo || PLACEHOLDER_IMG;
-        const socialsBlock = socialsHtml ? '\n                            <div class="contributor-socials">\n' + socialsHtml + '\n                            </div>' : '';
-        return '                        <div class="contributor-card">\n'
-            + '                            <div class="contributor-photo"><img src="../' + escHtml(photoSrc) + '" alt=""></div>\n'
-            + '                            <h3 class="contributor-name">' + escHtml(c.name) + '</h3>' + socialsBlock + '\n'
-            + '                        </div>';
-    }).join('\n\n');
-    return '                <aside class="blog-sidebar">\n'
-        + '                    <h2 class="blog-sidebar-title">Contributers:</h2>\n'
-        + '                    <div class="contributor-list">\n' + cards + '\n                    </div>\n'
-        + '                </aside>';
-}
-
-function spaces(n) { return new Array(n + 1).join(' '); }
-
-function buildTwoColAt(items, baseSpaces) {
-    const colA = items.filter(function(b) { return b.col === 'A'; });
-    const colB = items.filter(function(b) { return b.col === 'B'; });
-    const rowSp = baseSpaces + 4;
-    const cellSp = rowSp + 4;
-    const blockSp = cellSp + 4;
-    const count = Math.max(colA.length, colB.length);
-    const rows = [];
-    for (var i = 0; i < count; i++) {
-        const left  = colA[i] ? blockToBodyHtml(colA[i], spaces(blockSp)) : '';
-        const right = colB[i] ? blockToBodyHtml(colB[i], spaces(blockSp)) : '';
-        rows.push(spaces(rowSp) + '<div class="blog-row">\n'
-            + spaces(cellSp) + '<div class="blog-row-text">\n' + left + '\n' + spaces(cellSp) + '</div>\n'
-            + spaces(cellSp) + '<div class="blog-row-media">\n' + right + '\n' + spaces(cellSp) + '</div>\n'
-            + spaces(rowSp) + '</div>');
-    }
-    return spaces(baseSpaces) + '<div class="blog-two-col">\n' + rows.join('\n\n') + '\n' + spaces(baseSpaces) + '</div>';
-}
-
-// Walk blocks in order, grouping consecutive col-assigned blocks into two-col
-// segments. Preserves the block stack order in the generated HTML.
-function buildBodyInner(blocks, blockSpaces) {
-    const segments = [];
-    let current = null;
-    blocks.forEach(function(b) {
-        const segType = b.col ? 'col' : 'full';
-        if (!current || current.type !== segType) {
-            current = { type: segType, items: [] };
-            segments.push(current);
+    window.addEventListener('dragenter', function(e) {
+        if (e.dataTransfer && e.dataTransfer.types && Array.prototype.indexOf.call(e.dataTransfer.types, 'Files') !== -1) {
+            dragCounter++;
+            overlay.classList.add('active');
         }
-        current.items.push(b);
     });
-    return segments.map(function(seg) {
-        if (seg.type === 'full') {
-            return seg.items.map(function(b) { return blockToBodyHtml(b, spaces(blockSpaces)); }).join('\n\n');
-        }
-        return buildTwoColAt(seg.items, blockSpaces);
-    }).join('\n\n');
-}
-
-function buildContentStr(blocks, hasSidebar) {
-    if (hasSidebar) {
-        const inner = buildBodyInner(blocks, 24);
-        return '\n\n' + spaces(16) + '<div class="blog-layout">\n'
-            + spaces(20) + '<div class="blog-body">\n' + inner + '\n' + spaces(20) + '</div>\n\n'
-            + buildContributorSidebar() + '\n' + spaces(16) + '</div>';
-    }
-    const inner = buildBodyInner(blocks, 20);
-    return '\n\n' + spaces(16) + '<div class="blog-body">\n' + inner + '\n' + spaces(16) + '</div>';
-}
-
-function buildFullHTML() {
-    const tpl = baseTemplate || getBuiltinBaseTemplate();
-    const title      = getVal('f-title');
-    const author     = getVal('f-author');
-    const date       = getVal('f-date');
-
-    const hasSidebar = state.showContributors && state.contributors.length > 0;
-    const needsSlideshow = state.settings.hasSlideshowCss || state.blocks.some(function(b) { return b.type === 'slideshow'; });
-
-    const so = '<' + 'script', sc = '</' + 'script>';
-    const slideshowCss = needsSlideshow ? '\n    <link rel="stylesheet" href="../css/slideshow.css">' : '';
-    const slideshowJs  = needsSlideshow ? '\n    ' + so + ' src="../js/Slideshow.js">' + sc : '';
-
-    const content = buildContentStr(state.blocks, hasSidebar);
-
-    return tpl
-        .replace('{{PAGE_TITLE}}', escHtml(title))
-        .replace('{{POST_TITLE}}', escHtml(title))
-        .replace('{{POST_DATE}}',  escHtml(formatDisplayDate(date)))
-        .replace('{{POST_AUTHOR}}', escHtml(author))
-        .replace('{{POST_CONTENT}}', content)
-        .replace('{{SLIDESHOW_CSS}}', slideshowCss)
-        .replace('{{SLIDESHOW_JS}}', slideshowJs);
-}
-
-function buildJSONEntry() {
-    const title     = getVal('f-title');
-    const date      = getVal('f-date');
-    const endDate   = getVal('f-end-date');
-    const thumbnail = getVal('f-thumbnail');
-    const filename  = getFilename();
-    const isEvent   = state.settings.isEvent;
-    const category  = isEvent ? '"events"' : '"announcements"';
-    let entry = '        {\n'
-        + '            "href": "Announcements-Blogs/' + escJson(filename) + '",\n'
-        + '            "title": "' + escJson(title) + '",\n'
-        + '            "date": "' + formatJsonDate(date) + '"';
-    if (isEvent && endDate) entry += ',\n            "end_date": "' + formatJsonDate(endDate) + '"';
-    entry += ',\n            "thumbnail": "' + escJson(thumbnail) + '"\n        },';
-    return entry;
-}
+    window.addEventListener('dragleave', function() {
+        dragCounter--;
+        if (dragCounter <= 0) { dragCounter = 0; overlay.classList.remove('active'); }
+    });
+    window.addEventListener('dragover', function(e) { e.preventDefault(); });
+    window.addEventListener('drop', function(e) {
+        e.preventDefault();
+        dragCounter = 0;
+        overlay.classList.remove('active');
+        const file = e.dataTransfer && e.dataTransfer.files[0];
+        if (!file || !file.name.endsWith('.json')) return;
+        const reader = new FileReader();
+        reader.onload = function(ev) { try { applySaveData(JSON.parse(ev.target.result)); } catch(err) { alert('Could not read save file.'); } };
+        reader.readAsText(file);
+    });
+})();
 
 // ─── Generate button ──────────────────────────────────────────────────────────
 
@@ -1009,11 +681,8 @@ document.getElementById('btn-generate').addEventListener('click', function() {
     if (!state.templateId) { alert('Please choose a template first.'); return; }
     syncBlocksFromDOM();
     syncContributorsFromDOM();
-    const filename = getFilename();
-    const htmlOut  = buildFullHTML();
-    const jsonOut  = buildJSONEntry();
-    document.getElementById('out-html').value = htmlOut;
-    document.getElementById('out-json').value = jsonOut;
+    document.getElementById('out-html').value = buildFullHTML();
+    document.getElementById('out-json').value = buildJSONEntry();
     const sec = document.getElementById('output-section');
     sec.classList.add('visible');
     sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1030,6 +699,7 @@ function buildPreviewHtml() {
     syncBlocksFromDOM();
     syncContributorsFromDOM();
     const html = buildFullHTML();
+    if (!html) return null;
     const baseHref = new URL('../Announcements-Blogs/', window.location.href).href;
     const baseTag  = '<base href="' + baseHref + '">';
     return html.replace(/<head([^>]*)>/i, '<head$1>\n    ' + baseTag);
@@ -1084,20 +754,14 @@ document.addEventListener('keydown', function(e) {
 document.getElementById('btn-copy-html').addEventListener('click', function() { copyToClipboard(document.getElementById('out-html').value, this); });
 document.getElementById('btn-copy-json').addEventListener('click', function() { copyToClipboard(document.getElementById('out-json').value, this); });
 document.getElementById('btn-download-html').addEventListener('click', function() {
-    const content  = document.getElementById('out-html').value;
-    const filename = getFilename();
-    const blob = new Blob([content], { type: 'text/html;charset=utf-8' });
-    const url  = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = filename; a.click();
-    URL.revokeObjectURL(url);
+    downloadFallback(document.getElementById('out-html').value, getFilename(), 'text/html;charset=utf-8');
 });
 
 // ─── Filename auto-fill from title ────────────────────────────────────────────
 
 document.getElementById('f-title').addEventListener('input', function() {
     if (!filenameAutoFill) return;
-    const filenameEl = document.getElementById('f-filename');
-    filenameEl.value = slugify(this.value);
+    document.getElementById('f-filename').value = slugify(this.value);
 });
 
 document.getElementById('f-filename').addEventListener('input', function() {
@@ -1110,12 +774,4 @@ initEvents();
 initContribEvents();
 loadTemplates();
 loadBaseTemplate();
-
-function setDefaultDate() {
-    const d = new Date();
-    const iso = d.getFullYear() + '-'
-        + String(d.getMonth() + 1).padStart(2, '0') + '-'
-        + String(d.getDate()).padStart(2, '0');
-    document.getElementById('f-date').value = iso;
-}
 setDefaultDate();
