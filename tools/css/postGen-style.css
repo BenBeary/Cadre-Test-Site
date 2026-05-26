@@ -181,10 +181,6 @@ body {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    position: sticky;
-    top: calc(var(--header-h) + 28px);
-    max-height: calc(100vh - var(--header-h) - 60px);
-    overflow-y: auto;
     align-self: flex-start;
 }
 .contrib-sidebar-title {
@@ -195,7 +191,7 @@ body {
     color: var(--text-muted);
     padding: 4px 4px 6px;
 }
-.contrib-item { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; background: var(--surface2); }
+.contrib-item { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; background: var(--surface2); flex-shrink: 0; }
 .contrib-item-header {
     display: flex; align-items: center; gap: 8px;
     padding: 8px 12px;
