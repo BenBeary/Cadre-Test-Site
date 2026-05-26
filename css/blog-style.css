@@ -68,6 +68,13 @@
     margin-top: 0;
 }
 
+.blog-divider {
+    border: 0;
+    height: 1px;
+    background: var(--color-border);
+    margin: var(--space-4) 0;
+}
+
 .blog-figure {
     margin: var(--space-4) 0;
 }

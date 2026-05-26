@@ -358,6 +358,7 @@ function renderContentBuilder() {
     html += '<div class="add-block-bar">'
         + '<button class="btn-add" data-add="paragraph">+ Paragraph</button>'
         + '<button class="btn-add" data-add="section-heading">+ Section Heading</button>'
+        + '<button class="btn-add" data-add="divider">+ Divider</button>'
         + '<button class="btn-add" data-add="image">+ Image</button>'
         + '<button class="btn-add" data-add="youtube-inline">+ YouTube Embed</button>'
         + '<button class="btn-add" data-add="slideshow">+ Slideshow</button>'
@@ -384,6 +385,10 @@ function renderBlock(b, i) {
     } else if (b.type === 'section-heading') {
         badge = '<span class="block-type-badge type-section-heading">Section Heading</span>';
         bodyHtml = '<input type="text" data-field="text" value="' + escHtml(b.text) + '" placeholder="Section heading…">';
+
+    } else if (b.type === 'divider') {
+        badge = '<span class="block-type-badge type-divider">Divider</span>';
+        bodyHtml = '<div class="divider-preview" aria-hidden="true"></div>';
 
     } else if (b.type === 'image') {
         badge = '<span class="block-type-badge type-image">Image</span>';
@@ -418,8 +423,9 @@ function renderBlock(b, i) {
         bodyHtml = slidesHtml;
     }
 
-    return '<div class="block-item" data-block-idx="' + i + '">'
+    return '<div class="block-item" data-block-idx="' + i + '" draggable="true">'
         + '<div class="block-header">' + badge + colBadge
+        + '<span class="drag-handle" title="Drag to reorder"></span>'
         + '<div class="block-controls">'
         + '<button class="' + colAClass + '" data-set-col-a="' + i + '" title="Assign to Column A">A</button>'
         + '<button class="' + colBClass + '" data-set-col-b="' + i + '" title="Assign to Column B">B</button>'
@@ -465,6 +471,7 @@ function initEvents() {
             const defaults = {
                 'paragraph':      { type: 'paragraph', text: '' },
                 'section-heading':{ type: 'section-heading', text: '' },
+                'divider':        { type: 'divider' },
                 'image':          { type: 'image', url: '', alt: '', caption: '' },
                 'youtube-inline': { type: 'youtube-inline', url: '' },
                 'slideshow':      { type: 'slideshow', slides: [{ url: '', alt: '' }] }
@@ -534,6 +541,77 @@ function initEvents() {
             if (state.blocks[blockIdx].slides.length === 0) state.blocks[blockIdx].slides.push({ url: '', alt: '' });
             renderContentBuilder(); return;
         }
+    });
+
+    // ── Drag-and-drop reorder ──────────────────────────────────────────────
+    let dragSrcIndex = null;
+    let mouseDownEl = null;
+
+    function clearDropIndicators() {
+        builder.querySelectorAll('.drop-target-before, .drop-target-after')
+            .forEach(function(el) { el.classList.remove('drop-target-before', 'drop-target-after'); });
+    }
+
+    // dragstart's e.target is the draggable element (the .block-item itself),
+    // not the actual mousedown target. Track mousedown separately so we can
+    // tell whether the drag started from the header bar vs an input/button.
+    builder.addEventListener('mousedown', function(e) { mouseDownEl = e.target; });
+
+    builder.addEventListener('dragstart', function(e) {
+        const blockEl = e.target.closest('[data-block-idx]');
+        if (!blockEl) return;
+        if (!mouseDownEl || !mouseDownEl.closest('.drag-handle')) {
+            e.preventDefault(); return;
+        }
+        dragSrcIndex = Number(blockEl.dataset.blockIdx);
+        blockEl.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        try { e.dataTransfer.setData('text/plain', String(dragSrcIndex)); } catch (_) {}
+        syncBlocksFromDOM();
+    });
+
+    builder.addEventListener('dragend', function(e) {
+        const blockEl = e.target.closest('[data-block-idx]');
+        if (blockEl) blockEl.classList.remove('dragging');
+        clearDropIndicators();
+        dragSrcIndex = null;
+    });
+
+    builder.addEventListener('dragover', function(e) {
+        if (dragSrcIndex === null) return;
+        const blockEl = e.target.closest('[data-block-idx]');
+        if (!blockEl) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        const rect = blockEl.getBoundingClientRect();
+        const dropAfter = (e.clientY - rect.top) > rect.height / 2;
+        clearDropIndicators();
+        blockEl.classList.add(dropAfter ? 'drop-target-after' : 'drop-target-before');
+    });
+
+    builder.addEventListener('dragleave', function(e) {
+        if (dragSrcIndex === null) return;
+        if (!builder.contains(e.relatedTarget)) clearDropIndicators();
+    });
+
+    builder.addEventListener('drop', function(e) {
+        if (dragSrcIndex === null) return;
+        e.preventDefault();
+        const blockEl = e.target.closest('[data-block-idx]');
+        clearDropIndicators();
+        if (!blockEl) { dragSrcIndex = null; return; }
+        let targetIndex = Number(blockEl.dataset.blockIdx);
+        const rect = blockEl.getBoundingClientRect();
+        const dropAfter = (e.clientY - rect.top) > rect.height / 2;
+        if (dropAfter) targetIndex++;
+        if (dragSrcIndex < targetIndex) targetIndex--;
+        if (targetIndex !== dragSrcIndex) {
+            const moved = state.blocks.splice(dragSrcIndex, 1)[0];
+            state.blocks.splice(targetIndex, 0, moved);
+            renderContentBuilder();
+            clearOutput();
+        }
+        dragSrcIndex = null;
     });
 }
 
@@ -692,15 +770,39 @@ function applySaveData(data) {
     }
 }
 
-document.getElementById('btn-save-layout').addEventListener('click', function() {
-    const data = getSaveData();
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+function downloadFallback(content, filename, mime) {
+    const blob = new Blob([content], { type: mime });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    const fname = getVal('f-filename').trim();
-    a.href = url; a.download = (slugify(fname) || 'untitled-blog-post') + '-draft.json'; a.click();
+    a.href = url; a.download = filename; a.click();
     URL.revokeObjectURL(url);
-});
+}
+
+async function saveDraftAs() {
+    const data = getSaveData();
+    const json = JSON.stringify(data, null, 2);
+    const fname = getVal('f-filename').trim();
+    const suggestedName = (slugify(fname) || 'untitled-blog-post') + '-draft.json';
+
+    if (window.showSaveFilePicker) {
+        try {
+            const handle = await window.showSaveFilePicker({
+                suggestedName: suggestedName,
+                types: [{ description: 'Blog Post Draft (JSON)', accept: { 'application/json': ['.json'] } }]
+            });
+            const writable = await handle.createWritable();
+            await writable.write(json);
+            await writable.close();
+            return;
+        } catch (err) {
+            if (err && err.name === 'AbortError') return; // user cancelled — silent
+            console.error('Save As failed, falling back to download:', err);
+        }
+    }
+    downloadFallback(json, suggestedName, 'application/json');
+}
+
+document.getElementById('btn-save-layout').addEventListener('click', saveDraftAs);
 
 document.getElementById('btn-load-layout').addEventListener('click', function() { document.getElementById('import-file').click(); });
 
@@ -746,6 +848,8 @@ function blockToBodyHtml(b, indent) {
         return px + '<p>' + escHtml(b.text) + '</p>';
     } else if (b.type === 'section-heading') {
         return px + '<h2 class="blog-section-heading">' + escHtml(b.text) + '</h2>';
+    } else if (b.type === 'divider') {
+        return px + '<hr class="blog-divider">';
     } else if (b.type === 'image') {
         const src = b.url || PLACEHOLDER_IMG;
         const cap = b.caption ? '\n' + px + '    <figcaption>' + escHtml(b.caption) + '</figcaption>' : '';

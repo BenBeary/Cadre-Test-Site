@@ -283,7 +283,27 @@ textarea { resize: vertical; min-height: 80px; }
     padding: 9px 12px;
     background: rgba(255,255,255,0.04);
     border-bottom: 1px solid var(--border);
+    user-select: none;
 }
+.block-item.dragging { opacity: 0.4; }
+.block-item.drop-target-before { box-shadow: 0 -3px 0 0 var(--accent); }
+.block-item.drop-target-after  { box-shadow: 0  3px 0 0 var(--accent); }
+
+/* ── Drag handle — TEMP dotted outline (delete the .drag-handle border/background to remove the visible marker) ── */
+.drag-handle {
+    flex: 1;
+    min-width: 40px;
+    align-self: stretch;
+    margin: -9px 8px 0; /* top: extend through header padding; sides: extra breathing room from badge/controls */
+    background: rgba(0, 0, 0, 0.06); /* low-contrast darker fill, barely off the header */
+    border: 1px dotted var(--border-light);
+    border-top: 0;      /* keep the top edge invisible */
+    border-radius: 0 0 4px 4px;
+    cursor: grab;
+    transition: background-color 0.15s, border-color 0.15s;
+}
+.drag-handle:hover { background: rgba(255, 255, 255, 0.08); border-color: var(--accent); }
+.block-item.dragging .drag-handle { cursor: grabbing; background: rgba(255, 255, 255, 0.08); border-color: var(--accent); }
 .block-type-badge {
     font-size: 11px; font-weight: 700;
     text-transform: uppercase; letter-spacing: 0.5px;
@@ -294,6 +314,8 @@ textarea { resize: vertical; min-height: 80px; }
 .block-type-badge.type-youtube   { background: rgba(220,60,60,0.15);  color: #ef7070; }
 .block-type-badge.type-slideshow { background: rgba(200,130,40,0.15); color: #f0a050; }
 .block-type-badge.type-section-heading { background: rgba(176,112,248,0.15); color: #b070f8; }
+.block-type-badge.type-divider         { background: rgba(255,255,255,0.06); color: var(--text-muted); }
+.divider-preview { height: 1px; background: var(--border-light); width: 100%; margin: 8px 0; }
 .block-controls { margin-left: auto; display: flex; gap: 4px; }
 .btn-icon {
     background: none;
