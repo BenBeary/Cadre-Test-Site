@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="css/postGen-style.css">
     <link rel="stylesheet" href="AuthManager/auth.css">
     <link rel="stylesheet" href="AdminTools/admin-tools.css">
+    <link rel="stylesheet" href="AdminTools/image-manager/image-manager.css">
+    <link rel="stylesheet" href="AdminTools/show-changes/show-changes.css">
 </head>
 <body data-page-role="admin">
 
@@ -133,9 +135,42 @@
 
     </div><!-- end main-area -->
 
-    <!-- Right-side admin tools sidebar (admin page only) -->
+    <!-- Image Manager panel — registered with AdminToolManager from
+         AdminTools/image-manager/image-manager.js. Save/Undo/Reset moved to
+         the Show Changes panel since they operate on the shared ChangeQueue. -->
+    <aside class="image-manager-panel" id="image-manager-panel" style="display:none">
+        <div class="image-manager-header">
+            <div class="image-manager-title">Images</div>
+            <button class="image-manager-tool-btn" id="image-manager-reload" title="Reload tree from GitHub">↻</button>
+            <button class="image-manager-close" id="image-manager-close" title="Close">✕</button>
+        </div>
+        <div class="image-manager-body" id="image-manager-body">
+            <div class="image-manager-placeholder">Loading…</div>
+        </div>
+    </aside>
+
+    <!-- Show Changes panel — admin tool that displays ChangeQueue contents.
+         Registered with AdminToolManager from AdminTools/show-changes/show-changes.js. -->
+    <aside class="show-changes-panel" id="show-changes-panel" style="display:none">
+        <div class="show-changes-header">
+            <div class="show-changes-title">Pending Changes</div>
+            <button class="show-changes-tool-btn" id="show-changes-undo" disabled title="Undo last change">↶</button>
+            <button class="show-changes-tool-btn" id="show-changes-reset" disabled title="Drop all changes">↻</button>
+            <button class="show-changes-tool-btn show-changes-commit-btn" id="show-changes-commit" disabled title="Commit pending changes to GitHub">💾 Commit</button>
+            <button class="show-changes-close" id="show-changes-close" title="Close">✕</button>
+        </div>
+        <div class="show-changes-body" id="show-changes-body">
+            <div class="show-changes-placeholder">No pending changes.</div>
+        </div>
+    </aside>
+
+    <!-- Right-side admin tools sidebar (admin page only). Tools register with
+         AdminToolManager at DOMContentLoaded; the manager renders the buttons. -->
     <aside class="admin-tools-sidebar" id="admin-tools-sidebar">
-        <div class="sidebar-section-title">Admin Tools</div>
+        <div class="admin-tools-header">
+            <div class="sidebar-section-title">Admin Tools</div>
+            <button class="commit-btn" id="btn-commit" disabled title="Commit pending changes to GitHub">💾 Commit</button>
+        </div>
         <div class="admin-tools-list" id="admin-tools-list"></div>
         <div class="admin-tools-empty" id="admin-tools-empty">
             No tools yet — more coming soon.
@@ -206,9 +241,85 @@
     </div>
 </div>
 
+<!-- Image Manager: delete confirmation -->
+<div class="modal-overlay" id="img-delete-modal-overlay" style="display:none">
+    <div class="modal-box">
+        <div class="modal-title" id="img-delete-title">Delete?</div>
+        <div class="modal-body" id="img-delete-body"></div>
+        <div class="modal-actions">
+            <button class="btn-modal-cancel" id="img-delete-cancel">Keep</button>
+            <button class="btn-modal-confirm" id="img-delete-confirm">Queue Delete</button>
+        </div>
+    </div>
+</div>
+
+<!-- Commit confirmation modal — owned by show-changes.js. Fires when the user
+     clicks the sidebar Commit button or the in-panel Commit button. -->
+<div class="modal-overlay" id="commit-modal-overlay" style="display:none">
+    <div class="modal-box">
+        <div class="modal-title">Commit <span id="commit-modal-count"></span> changes?</div>
+        <div class="modal-body">
+            <ul id="commit-modal-list"></ul>
+            <label class="commit-modal-label" for="commit-modal-name">Commit name <span class="commit-modal-label-hint">(optional)</span></label>
+            <input type="text" id="commit-modal-name" class="commit-modal-input" placeholder="" autocomplete="off" spellcheck="false">
+            <p class="commit-modal-help">Leave blank to use the auto-generated summary (shown as the placeholder). The final commit message is prefixed with <code>Browser:</code> automatically.</p>
+        </div>
+        <div class="modal-actions">
+            <button class="btn-modal-cancel" id="commit-modal-cancel">Cancel</button>
+            <button class="btn-modal-confirm" id="commit-modal-confirm">Commit all</button>
+        </div>
+    </div>
+</div>
+
+<!-- Image Manager: conflict modal (shown when a save fails partway) -->
+<div class="modal-overlay" id="img-conflict-modal-overlay" style="display:none">
+    <div class="modal-box">
+        <div class="modal-title">Conflict detected</div>
+        <div class="modal-body">
+            <p>Couldn't apply <code id="img-conflict-action"></code> on <code id="img-conflict-path"></code>:</p>
+            <pre id="img-conflict-message" class="img-conflict-message"></pre>
+            <p>The file likely changed on GitHub since the tree was loaded.</p>
+            <p id="img-conflict-progress"></p>
+        </div>
+        <div class="modal-actions">
+            <button class="btn-modal-cancel" id="img-conflict-keep">Keep queue</button>
+            <button class="btn-modal-confirm" id="img-conflict-reset">↻ Reset</button>
+        </div>
+    </div>
+</div>
+
+<!-- Image Manager: upload modal -->
+<div class="modal-overlay" id="img-upload-modal-overlay" style="display:none">
+    <div class="modal-box modal-box-wide">
+        <div class="modal-title">Add images to <code id="img-upload-dest"></code></div>
+        <div class="modal-body">
+            <div class="img-upload-dropzone" id="img-upload-dropzone">
+                <div class="img-upload-dropzone-icon">📥</div>
+                <div>Drag PNG / JPEG files here</div>
+                <div class="img-upload-dropzone-or">— or —</div>
+                <label class="img-upload-browse-btn">
+                    Choose Files…
+                    <input type="file" id="img-upload-file-input" multiple accept="image/png,image/jpeg" hidden>
+                </label>
+            </div>
+            <ul class="img-upload-preview" id="img-upload-preview"></ul>
+            <div class="img-upload-error" id="img-upload-error" style="display:none"></div>
+        </div>
+        <div class="modal-actions">
+            <button class="btn-modal-cancel" id="img-upload-cancel">Cancel</button>
+            <button class="btn-modal-confirm" id="img-upload-confirm" disabled>Add to queue</button>
+        </div>
+    </div>
+</div>
+
 <script src="AuthManager/auth.js"></script>
+<script src="AuthManager/github-api.js"></script>
+<script src="AdminTools/admin-tool-manager.js"></script>
+<script src="AdminTools/change-queue.js"></script>
 <script src="js/post-gen-data.js"></script>
 <script src="js/post-gen-output.js"></script>
 <script src="js/post-gen.js"></script>
+<script src="AdminTools/show-changes/show-changes.js"></script>
+<script src="AdminTools/image-manager/image-manager.js"></script>
 </body>
 </html>
