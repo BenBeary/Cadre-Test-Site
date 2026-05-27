@@ -66,6 +66,11 @@
     white-space: nowrap;
 }
 .admin-context-menu-item:hover { background: var(--accent); color: white; }
+.admin-context-menu-item-disabled {
+    opacity: 0.4;
+    cursor: default;
+    pointer-events: none;
+}
 
 .admin-tools-list {
     display: flex;

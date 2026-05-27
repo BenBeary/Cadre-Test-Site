@@ -35,25 +35,28 @@ const ChangeQueue = (function () {
         if (a.type === 'deleteFile')      return 'Delete: ' + a.path;
         if (a.type === 'deleteFolder')    return 'Delete folder: ' + a.path + '/ (' + a.containedFiles.length + ' files)';
         if (a.type === 'publishHtml')     return 'Publish: ' + a.path;
-        if (a.type === 'updateBlogIndex') return 'Update blog index: ' + a.path + ' (+' + a.addedCount + ' → ' + a.addedFor + ')';
+        if (a.type === 'unpublishHtml')   return 'Unpublish: ' + a.path;
+        if (a.type === 'updateBlogIndex') return 'Update blog index: ' + a.path;
         return a.type + ': ' + (a.path || '?');
     }
 
     function summarize() {
-        let creates = 0, uploads = 0, deletes = 0, publishes = 0;
+        let creates = 0, uploads = 0, deletes = 0, publishes = 0, unpublishes = 0;
         items.forEach(function(a) {
             if      (a.type === 'createFolder')    creates++;
             else if (a.type === 'uploadFile')      uploads++;
             else if (a.type === 'deleteFile')      deletes++;
             else if (a.type === 'deleteFolder')    deletes += a.containedFiles.length;
             else if (a.type === 'publishHtml')     publishes++;
-            // updateBlogIndex is bundled with publishes — don't count separately
+            else if (a.type === 'unpublishHtml')   unpublishes++;
+            // updateBlogIndex is bundled with publishes/unpublishes — don't count separately
         });
         const parts = [];
-        if (publishes) parts.push('+' + publishes + ' blog'    + (publishes === 1 ? '' : 's'));
-        if (uploads)   parts.push('+' + uploads   + ' upload'  + (uploads   === 1 ? '' : 's'));
-        if (creates)   parts.push('+' + creates   + ' folder'  + (creates   === 1 ? '' : 's'));
-        if (deletes)   parts.push('−' + deletes   + ' deletion'+ (deletes   === 1 ? '' : 's'));
+        if (publishes)   parts.push('+' + publishes   + ' blog'    + (publishes   === 1 ? '' : 's'));
+        if (unpublishes) parts.push('−' + unpublishes + ' blog'    + (unpublishes === 1 ? '' : 's'));
+        if (uploads)     parts.push('+' + uploads     + ' upload'  + (uploads     === 1 ? '' : 's'));
+        if (creates)     parts.push('+' + creates     + ' folder'  + (creates     === 1 ? '' : 's'));
+        if (deletes)     parts.push('−' + deletes     + ' deletion'+ (deletes     === 1 ? '' : 's'));
         return parts.join(', ') || 'no changes';
     }
 
@@ -64,7 +67,7 @@ const ChangeQueue = (function () {
                 out.push({ op: 'put', path: a.path + '/.gitkeep', content: '' });
             } else if (a.type === 'uploadFile') {
                 out.push({ op: 'putB64', path: a.path, base64: a.base64 });
-            } else if (a.type === 'deleteFile') {
+            } else if (a.type === 'deleteFile' || a.type === 'unpublishHtml') {
                 out.push({ op: 'delete', path: a.path });
             } else if (a.type === 'deleteFolder') {
                 a.containedFiles.forEach(function(f) {
@@ -77,11 +80,13 @@ const ChangeQueue = (function () {
         return out;
     }
 
-    // Undoing a publishHtml needs to undo its effect on the bundled
-    // updateBlogIndex too — otherwise removing the HTML leaves a stale
-    // JSON entry pointing at a file that won't be uploaded.
+    // Undoing a publishHtml / unpublishHtml needs to undo its effect on the
+    // bundled updateBlogIndex too — otherwise removing the HTML action leaves
+    // a stale JSON entry (or missing one) referencing the wrong state.
     function cleanupAfterRemoval(removed) {
-        if (!removed || removed.type !== 'publishHtml') return;
+        if (!removed) return;
+        if (removed.type !== 'publishHtml' && removed.type !== 'unpublishHtml') return;
+
         const idx = items.findIndex(function(a) { return a.type === 'updateBlogIndex'; });
         if (idx === -1) return;
         const upd = items[idx];
@@ -89,38 +94,35 @@ const ChangeQueue = (function () {
         try { json = JSON.parse(upd.content); }
         catch (_) { return; }
 
-        // Remove the entry this publishHtml added (or moved into target)
-        const href = removed.path;
-        if (Array.isArray(json[removed.target])) {
-            const ei = json[removed.target].findIndex(function(e) { return e && e.href === href; });
-            if (ei >= 0) json[removed.target].splice(ei, 1);
+        if (removed.type === 'publishHtml') {
+            // Remove the entry this publishHtml added (or moved into target)
+            const href = removed.path;
+            if (Array.isArray(json[removed.target])) {
+                const ei = json[removed.target].findIndex(function(e) { return e && e.href === href; });
+                if (ei >= 0) json[removed.target].splice(ei, 1);
+            }
+            // If it was an overwrite, restore the original entry to its original array
+            if (removed.originalEntry && removed.originalTarget) {
+                if (!Array.isArray(json[removed.originalTarget])) json[removed.originalTarget] = [];
+                json[removed.originalTarget].push(removed.originalEntry);
+            }
+        } else if (removed.type === 'unpublishHtml') {
+            // Restore the entry this unpublishHtml removed
+            if (removed.originalEntry && removed.originalTarget) {
+                if (!Array.isArray(json[removed.originalTarget])) json[removed.originalTarget] = [];
+                json[removed.originalTarget].push(removed.originalEntry);
+            }
         }
 
-        // If it was an overwrite, restore the original entry to its original array
-        if (removed.originalEntry && removed.originalTarget) {
-            if (!Array.isArray(json[removed.originalTarget])) json[removed.originalTarget] = [];
-            json[removed.originalTarget].push(removed.originalEntry);
-        }
-
-        // No more publishHtml in the queue → JSON change is moot, drop the action
-        const stillPublishing = items.some(function(a) { return a.type === 'publishHtml'; });
-        if (!stillPublishing) {
+        // No more publish/unpublish actions in the queue → JSON change is moot
+        const stillTouching = items.some(function(a) {
+            return a.type === 'publishHtml' || a.type === 'unpublishHtml';
+        });
+        if (!stillTouching) {
             items.splice(idx, 1);
             return;
         }
-
-        // Recompute the JSON content + the counts used by the label
         upd.content = JSON.stringify(json, null, 4);
-        let na = 0, ne = 0;
-        items.forEach(function(act) {
-            if (act.type === 'publishHtml' && !act.originalEntry) {
-                if (act.target === 'announcements') na++;
-                else if (act.target === 'events')   ne++;
-            }
-        });
-        upd.addedAnnouncements = na;
-        upd.addedEvents        = ne;
-        upd.addedCount         = na + ne;
     }
 
     return {

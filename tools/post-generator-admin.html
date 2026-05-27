@@ -272,6 +272,33 @@
     </div>
 </div>
 
+<!-- Blog List: delete confirmation. Owned by blog-list.js. -->
+<div class="modal-overlay" id="blog-delete-modal-overlay" style="display:none">
+    <div class="modal-box">
+        <div class="modal-title">Delete blog?</div>
+        <div class="modal-body" id="blog-delete-body"></div>
+        <div class="modal-actions">
+            <button class="btn-modal-cancel"  id="blog-delete-cancel">Cancel</button>
+            <button class="btn-modal-confirm" id="blog-delete-confirm">Delete blog</button>
+        </div>
+    </div>
+</div>
+
+<!-- Blog List: confirm before replacing in-progress builder content with a
+     loaded blog. Skipped automatically when the builder is empty. -->
+<div class="modal-overlay" id="blog-edit-modal-overlay" style="display:none">
+    <div class="modal-box">
+        <div class="modal-title">Replace builder contents?</div>
+        <div class="modal-body">
+            Loading <code id="blog-edit-name"></code> into the builder will replace anything you have in progress. Save your current draft first if you need it.
+        </div>
+        <div class="modal-actions">
+            <button class="btn-modal-cancel"  id="blog-edit-cancel">Cancel</button>
+            <button class="btn-modal-confirm" id="blog-edit-confirm">Load &amp; replace</button>
+        </div>
+    </div>
+</div>
+
 <!-- Publish Blog: confirm overwrite when the chosen filename already has an
      entry in blog-data.json (either on the server or staged from a prior
      publish this session). publish-blog.js drives this via a Promise. -->

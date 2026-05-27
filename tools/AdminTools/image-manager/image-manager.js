@@ -32,19 +32,19 @@ async function imgMgrFetchTree() {
 
 // Build / apply tree --------------------------------------------------
 function imgMgrBuildHierarchy(flatEntries) {
-    const root = { name: 'images', path: 'images', type: 'folder', children: [] };
+    const root = { name: 'Blog-Images', path: 'images/Blog-Images', type: 'folder', children: [] };
     const folderMap = new Map();
-    folderMap.set('images', root);
+    folderMap.set('images/Blog-Images', root);
 
     flatEntries.forEach(function(e) {
-        if (!e.path.startsWith('images/')) return;
+        if (!e.path.startsWith('images/Blog-Images/')) return;
         if (e.type !== 'tree') return;
         const node = { name: e.path.split('/').pop(), path: e.path, type: 'folder', children: [] };
         folderMap.set(e.path, node);
     });
 
     flatEntries.forEach(function(e) {
-        if (!e.path.startsWith('images/')) return;
+        if (!e.path.startsWith('images/Blog-Images/')) return;
         if (e.type !== 'tree') return;
         const parentPath = e.path.split('/').slice(0, -1).join('/');
         const parent = folderMap.get(parentPath);
@@ -53,7 +53,7 @@ function imgMgrBuildHierarchy(flatEntries) {
     });
 
     flatEntries.forEach(function(e) {
-        if (!e.path.startsWith('images/')) return;
+        if (!e.path.startsWith('images/Blog-Images/')) return;
         if (e.type !== 'blob') return;
         const name = e.path.split('/').pop();
         const ext = name.split('.').pop().toLowerCase();
@@ -139,7 +139,7 @@ function imgMgrRebuildLocal() {
     actions.forEach(function(a) {
         if (a.type === 'createFolder' || a.type === 'uploadFile') {
             const parent = a.path.split('/').slice(0, -1).join('/');
-            if (parent && parent !== 'images') imgMgrExpanded.add(parent);
+            if (parent && parent !== 'images/Blog-Images') imgMgrExpanded.add(parent);
         }
     });
     imgMgrRenderTree();
@@ -176,7 +176,7 @@ function imgMgrRenderNode(node, depth) {
              + tag
              + '</div>';
     }
-    const isRoot = node.path === 'images';
+    const isRoot = node.path === 'images/Blog-Images';
     const expanded = isRoot || imgMgrExpanded.has(node.path);
     const icon = expanded ? '📂' : '📁';
     let html = '<div class="img-row img-row-folder' + (expanded ? ' expanded' : '') + pendingClass
@@ -197,7 +197,7 @@ function imgMgrRenderNode(node, depth) {
 }
 
 function imgMgrToggleFolder(path) {
-    if (path === 'images') return;
+    if (path === 'images/Blog-Images') return;
     if (imgMgrExpanded.has(path)) imgMgrExpanded.delete(path);
     else imgMgrExpanded.add(path);
     imgMgrRenderTree();
@@ -247,7 +247,7 @@ function imgMgrContextMenuItems(node) {
         }
         return items;
     }
-    const isRoot = node.path === 'images';
+    const isRoot = node.path === 'images/Blog-Images';
     const items = [
         { label: 'New Folder', action: function() { imgMgrPromptNewFolder(node); } },
         { label: 'Add Image…', action: function() { imgMgrOpenUploadModal(node.path); } }

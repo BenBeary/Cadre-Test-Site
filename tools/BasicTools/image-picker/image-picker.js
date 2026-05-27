@@ -24,24 +24,24 @@ async function ipFetchTree() {
 }
 
 function ipBuildHierarchy(flatEntries) {
-    const root = { name: 'images', path: 'images', type: 'folder', children: [] };
+    const root = { name: 'Blog-Images', path: 'images/Blog-Images', type: 'folder', children: [] };
     const folderMap = new Map();
-    folderMap.set('images', root);
+    folderMap.set('images/Blog-Images', root);
 
     flatEntries.forEach(function(e) {
-        if (!e.path.startsWith('images/')) return;
+        if (!e.path.startsWith('images/Blog-Images/')) return;
         if (e.type !== 'tree') return;
         folderMap.set(e.path, { name: e.path.split('/').pop(), path: e.path, type: 'folder', children: [] });
     });
     flatEntries.forEach(function(e) {
-        if (!e.path.startsWith('images/')) return;
+        if (!e.path.startsWith('images/Blog-Images/')) return;
         if (e.type !== 'tree') return;
         const parent = folderMap.get(e.path.split('/').slice(0, -1).join('/'));
         const node = folderMap.get(e.path);
         if (parent && node) parent.children.push(node);
     });
     flatEntries.forEach(function(e) {
-        if (!e.path.startsWith('images/')) return;
+        if (!e.path.startsWith('images/Blog-Images/')) return;
         if (e.type !== 'blob') return;
         const name = e.path.split('/').pop();
         const ext = name.split('.').pop().toLowerCase();
@@ -94,7 +94,7 @@ function ipRenderNode(node, depth) {
              + '<span class="img-picker-name">' + escHtml(node.name) + '</span>'
              + '</div>';
     }
-    const isRoot = node.path === 'images';
+    const isRoot = node.path === 'images/Blog-Images';
     const expanded = isRoot || ipExpanded.has(node.path);
     const icon = expanded ? '📂' : '📁';
     let html = '<div class="img-picker-item img-picker-folder' + (expanded ? ' expanded' : '')
@@ -114,7 +114,7 @@ function ipRenderNode(node, depth) {
 }
 
 function ipToggleFolder(path) {
-    if (path === 'images') return;
+    if (path === 'images/Blog-Images') return;
     if (ipExpanded.has(path)) ipExpanded.delete(path);
     else ipExpanded.add(path);
     ipRenderTree();

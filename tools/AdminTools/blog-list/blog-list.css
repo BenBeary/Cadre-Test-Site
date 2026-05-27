@@ -71,6 +71,26 @@
 }
 .blog-list-item:hover { background: var(--surface2); }
 
+/* Row state when an unpublishHtml is staged for this blog. */
+.blog-list-item-pending {
+    background: rgba(245, 24, 24, 0.10);
+    text-decoration: line-through;
+    color: var(--text-muted);
+}
+.blog-list-item-pending:hover { background: rgba(245, 24, 24, 0.16); }
+.blog-list-tag {
+    font-size: 9px;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 3px;
+    margin-left: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: var(--danger);
+    color: white;
+    flex-shrink: 0;
+}
+
 .blog-list-icon { font-size: 14px; flex-shrink: 0; }
 
 .blog-list-name {

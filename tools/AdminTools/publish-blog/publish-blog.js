@@ -82,6 +82,12 @@ function pbOpenModal() {
         alert('Please enter a filename before publishing.');
         return;
     }
+    // Reserved filenames in Announcements-Blogs/ that must never be overwritten.
+    const reserved = ['index.html', 'base-template.html'];
+    if (reserved.indexOf(filename.toLowerCase()) !== -1) {
+        alert('"' + filename + '" is reserved by the site (index / base template). Please choose a different filename.');
+        return;
+    }
     const fnEl = document.getElementById('publish-modal-filename');
     if (fnEl) fnEl.textContent = filename;
 
