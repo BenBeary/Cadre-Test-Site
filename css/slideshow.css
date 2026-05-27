@@ -1,14 +1,19 @@
 .slideshow {
     position: relative;
     width: 100%;
-    display: flex;
+    display: grid;
+    grid-template-columns: 1fr auto auto auto 1fr;
+    grid-template-rows: auto auto;
+    column-gap: var(--space-2);
+    row-gap: var(--space-2);
     align-items: center;
-    gap: var(--space-1);
 }
 
 .slideshow-viewport {
     position: relative;
-    flex: 1;
+    grid-column: 1 / -1;
+    grid-row: 1;
+    width: 100%;
     overflow: hidden;
     border-radius: var(--radius);
     background-color: #000;
@@ -33,9 +38,9 @@
     pointer-events: auto;
 }
 
-/* Arrows */
+/* Arrows — clustered with dots on row 2 */
 .slideshow-arrow {
-    flex: 0 0 auto;
+    grid-row: 2;
     background: transparent;
     border: none;
     color: var(--color-fg);
@@ -47,6 +52,9 @@
     border-radius: 50%;
     transition: color 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
 }
+
+.slideshow-arrow-prev { grid-column: 2; }
+.slideshow-arrow-next { grid-column: 4; }
 
 .slideshow-arrow:hover {
     color: var(--color-primary);
@@ -66,43 +74,54 @@
     stroke-width: 1.5;
 }
 
-/* Indicators (long rectangles) */
+/* Indicators */
 .slideshow-dots {
-    position: absolute;
-    left: 50%;
-    bottom: var(--space-2);
-    transform: translateX(-50%);
+    grid-column: 3;
+    grid-row: 2;
     display: flex;
+    align-items: center;
     gap: var(--space-1);
 }
 
 .slideshow-dot {
-    width: 36px;
-    height: 6px;
-    background-color: rgba(180, 180, 180, 0.85);
+    width: 12px;
+    height: 5px;
+    background-color: rgba(180, 180, 180, 0.55);
     border: none;
     cursor: pointer;
     padding: 0;
-    transition: background-color 0.2s ease, transform 0.2s ease;
+    border-radius: 2px;
+    transition: width 0.3s ease, height 0.3s ease, background-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .slideshow-dot:hover {
-    background-color: rgb(120, 120, 120);
-    transform: scaleY(1.2);
+    background-color: rgba(180, 180, 180, 0.85);
 }
 
 .slideshow-dot:focus-visible {
-    outline: 2px solid var(--color-bg);
+    outline: 2px solid var(--color-primary);
     outline-offset: 2px;
 }
 
+/* Active dot — beveled rectangle */
 .slideshow-dot.is-active {
-    background-color: rgb(255, 255, 255);
+    width: 38px;
+    height: 9px;
+    background-color: var(--color-fg);
+    border-radius: 3px;
+    box-shadow:
+        inset 1px 1px 0 rgba(255, 255, 255, 0.45),
+        inset -1px -1px 0 rgba(0, 0, 0, 0.5),
+        0 1px 2px rgba(0, 0, 0, 0.25);
 }
 
 @media (max-width: 600px) {
     .slideshow-dot {
+        width: 10px;
+        height: 4px;
+    }
+    .slideshow-dot.is-active {
         width: 28px;
-        height: 5px;
+        height: 7px;
     }
 }
