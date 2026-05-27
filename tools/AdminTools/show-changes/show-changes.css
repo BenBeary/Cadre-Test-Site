@@ -155,6 +155,37 @@
     line-height: 1.4;
 }
 
+/* "Committing…" overlay shown while ghBatchCommit is in-flight.
+   Absolutely positioned inside the panel (which is position: sticky and
+   therefore acts as its absolute-positioning containing block). */
+.show-changes-committing {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    z-index: 100;
+}
+.show-changes-committing-icon {
+    font-size: 48px;
+    color: white;
+    animation: show-changes-spin 1s linear infinite;
+    line-height: 1;
+}
+.show-changes-committing-text {
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+}
+@keyframes show-changes-spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+}
+
 /* 720p height compensation (matches body { zoom: 0.8 } in postGen-style.css) */
 @media (max-height: 800px) {
     .show-changes-panel {

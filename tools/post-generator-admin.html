@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="AdminTools/admin-tools.css">
     <link rel="stylesheet" href="AdminTools/image-manager/image-manager.css">
     <link rel="stylesheet" href="AdminTools/show-changes/show-changes.css">
+    <link rel="stylesheet" href="AdminTools/publish-blog/publish-blog.css">
 </head>
 <body data-page-role="admin">
 
@@ -162,6 +163,10 @@
         <div class="show-changes-body" id="show-changes-body">
             <div class="show-changes-placeholder">No pending changes.</div>
         </div>
+        <div class="show-changes-committing" id="show-changes-committing" style="display:none">
+            <div class="show-changes-committing-icon">↻</div>
+            <div class="show-changes-committing-text">Committing…</div>
+        </div>
     </aside>
 
     <!-- Right-side admin tools sidebar (admin page only). Tools register with
@@ -253,6 +258,27 @@
     </div>
 </div>
 
+<!-- Publish Blog: pick Announcements vs Events -->
+<div class="modal-overlay" id="publish-modal-overlay" style="display:none">
+    <div class="modal-box">
+        <div class="modal-title">Publish Blog</div>
+        <div class="modal-body">
+            <p>Where should this blog be added?</p>
+            <p>Files about to be staged:</p>
+            <ul>
+                <li><code>Announcements-Blogs/<span id="publish-modal-filename"></span></code></li>
+                <li><code>json/blog-data.json</code> (entry appended to the chosen array)</li>
+            </ul>
+            <p class="publish-modal-help">Both files are bundled into a single commit when you click <strong>💾 Commit</strong>.</p>
+        </div>
+        <div class="modal-actions">
+            <button class="btn-modal-cancel" id="publish-modal-cancel">Cancel</button>
+            <button class="btn-modal-confirm publish-modal-event-btn" id="publish-modal-event">📅 Event</button>
+            <button class="btn-modal-confirm publish-modal-announce-btn" id="publish-modal-announce">📢 Announcement</button>
+        </div>
+    </div>
+</div>
+
 <!-- Commit confirmation modal — owned by show-changes.js. Fires when the user
      clicks the sidebar Commit button or the in-panel Commit button. -->
 <div class="modal-overlay" id="commit-modal-overlay" style="display:none">
@@ -321,5 +347,6 @@
 <script src="js/post-gen.js"></script>
 <script src="AdminTools/show-changes/show-changes.js"></script>
 <script src="AdminTools/image-manager/image-manager.js"></script>
+<script src="AdminTools/publish-blog/publish-blog.js"></script>
 </body>
 </html>

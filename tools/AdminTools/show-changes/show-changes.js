@@ -106,6 +106,7 @@ async function scPerformCommit() {
     if (!ChangeQueue.length || scCommitting) return;
     scCloseCommitModal();
     scCommitting = true;
+    scShowCommittingOverlay(true);
     scUpdateToolbar();
     scUpdateSidebarCommit();
     const total = ChangeQueue.length;
@@ -120,6 +121,7 @@ async function scPerformCommit() {
         });
         ChangeQueue.clear();
         scCommitting = false;
+        scShowCommittingOverlay(false);
         if (result.retried) console.info('Show Changes: commit retried once after a race.');
         // Refresh Image Manager tree if it's loaded
         if (typeof imgMgrLoaded !== 'undefined' && imgMgrLoaded && typeof imgMgrLoadAndRender === 'function') {
@@ -130,10 +132,16 @@ async function scPerformCommit() {
         scUpdateSidebarCommit();
     } catch (err) {
         scCommitting = false;
+        scShowCommittingOverlay(false);
         scUpdateToolbar();
         scUpdateSidebarCommit();
         scShowConflictModal(err, total);
     }
+}
+
+function scShowCommittingOverlay(show) {
+    const el = document.getElementById('show-changes-committing');
+    if (el) el.style.display = show ? 'flex' : 'none';
 }
 
 // Conflict modal (DOM IDs kept as img-conflict-* for HTML-stability) -

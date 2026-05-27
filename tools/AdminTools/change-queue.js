@@ -30,25 +30,30 @@ const ChangeQueue = (function () {
     }
 
     function labelFor(a) {
-        if (a.type === 'createFolder') return 'Create folder: ' + a.path;
-        if (a.type === 'uploadFile')   return 'Upload: ' + a.path;
-        if (a.type === 'deleteFile')   return 'Delete: ' + a.path;
-        if (a.type === 'deleteFolder') return 'Delete folder: ' + a.path + '/ (' + a.containedFiles.length + ' files)';
+        if (a.type === 'createFolder')    return 'Create folder: ' + a.path;
+        if (a.type === 'uploadFile')      return 'Upload: ' + a.path;
+        if (a.type === 'deleteFile')      return 'Delete: ' + a.path;
+        if (a.type === 'deleteFolder')    return 'Delete folder: ' + a.path + '/ (' + a.containedFiles.length + ' files)';
+        if (a.type === 'publishHtml')     return 'Publish: ' + a.path;
+        if (a.type === 'updateBlogIndex') return 'Update blog index: ' + a.path + ' (+' + a.addedCount + ' → ' + a.addedFor + ')';
         return a.type + ': ' + (a.path || '?');
     }
 
     function summarize() {
-        let creates = 0, uploads = 0, deletes = 0;
+        let creates = 0, uploads = 0, deletes = 0, publishes = 0;
         items.forEach(function(a) {
-            if      (a.type === 'createFolder') creates++;
-            else if (a.type === 'uploadFile')   uploads++;
-            else if (a.type === 'deleteFile')   deletes++;
-            else if (a.type === 'deleteFolder') deletes += a.containedFiles.length;
+            if      (a.type === 'createFolder')    creates++;
+            else if (a.type === 'uploadFile')      uploads++;
+            else if (a.type === 'deleteFile')      deletes++;
+            else if (a.type === 'deleteFolder')    deletes += a.containedFiles.length;
+            else if (a.type === 'publishHtml')     publishes++;
+            // updateBlogIndex is bundled with publishes — don't count separately
         });
         const parts = [];
-        if (uploads) parts.push('+' + uploads + ' upload'   + (uploads === 1 ? '' : 's'));
-        if (creates) parts.push('+' + creates + ' folder'   + (creates === 1 ? '' : 's'));
-        if (deletes) parts.push('−' + deletes + ' deletion' + (deletes === 1 ? '' : 's'));
+        if (publishes) parts.push('+' + publishes + ' blog'    + (publishes === 1 ? '' : 's'));
+        if (uploads)   parts.push('+' + uploads   + ' upload'  + (uploads   === 1 ? '' : 's'));
+        if (creates)   parts.push('+' + creates   + ' folder'  + (creates   === 1 ? '' : 's'));
+        if (deletes)   parts.push('−' + deletes   + ' deletion'+ (deletes   === 1 ? '' : 's'));
         return parts.join(', ') || 'no changes';
     }
 
@@ -65,6 +70,8 @@ const ChangeQueue = (function () {
                 a.containedFiles.forEach(function(f) {
                     out.push({ op: 'delete', path: f.path });
                 });
+            } else if (a.type === 'publishHtml' || a.type === 'updateBlogIndex') {
+                out.push({ op: 'put', path: a.path, content: a.content });
             }
         });
         return out;
@@ -75,6 +82,13 @@ const ChangeQueue = (function () {
         removeAt:  function(i) { if (i >= 0 && i < items.length) { items.splice(i, 1); emit(); } },
         pop:       function() { if (items.length) { items.pop(); emit(); } },
         clear:     function() { if (items.length) { items.length = 0; emit(); } },
+        replaceOrAdd: function(predicate, item) {
+            for (let i = 0; i < items.length; i++) {
+                if (predicate(items[i])) { items[i] = item; emit(); return; }
+            }
+            items.push(item);
+            emit();
+        },
         list:      function() { return items.slice(); },
         get length() { return items.length; },
         subscribe: function(fn) {
