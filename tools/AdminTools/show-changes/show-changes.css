@@ -112,8 +112,9 @@
     letter-spacing: 0.05em;
     flex-shrink: 0;
 }
-.show-changes-tag-add { background: var(--accent); color: white; }
-.show-changes-tag-del { background: var(--danger); color: white; }
+.show-changes-tag-add       { background: var(--accent); color: white; }
+.show-changes-tag-del       { background: var(--danger); color: white; }
+.show-changes-tag-overwrite { background: #d4a017;       color: #1a1300; }
 
 .show-changes-item-label {
     flex: 1;

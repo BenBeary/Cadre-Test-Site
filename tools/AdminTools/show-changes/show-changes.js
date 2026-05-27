@@ -25,7 +25,7 @@ function scRender() {
         body.innerHTML = '<ul class="show-changes-list">'
             + list.map(function(a, i) {
                 return '<li class="show-changes-item" data-i="' + i + '">'
-                     + scTypeTag(a.type)
+                     + scTypeTag(a)
                      + '<span class="show-changes-item-label">' + escHtml(ChangeQueue.labelFor(a)) + '</span>'
                      + '</li>';
             }).join('')
@@ -35,11 +35,23 @@ function scRender() {
     scUpdateSidebarCommit();
 }
 
-function scTypeTag(type) {
-    if (type === 'createFolder') return '<span class="show-changes-tag show-changes-tag-add">+folder</span>';
-    if (type === 'uploadFile')   return '<span class="show-changes-tag show-changes-tag-add">+upload</span>';
-    if (type === 'deleteFile' || type === 'deleteFolder')
+function scTypeTag(action) {
+    const type = action.type;
+
+    // Overwrite: editing an existing blog (publishHtml carrying an originalEntry)
+    // or the bundled blog-index JSON rewrite that always replaces an existing file.
+    const isOverwrite =
+        (type === 'publishHtml' && action.originalEntry) ||
+        type === 'updateBlogIndex';
+    if (isOverwrite)
+        return '<span class="show-changes-tag show-changes-tag-overwrite">+overwrite</span>';
+
+    if (type === 'createFolder' || type === 'uploadFile' || type === 'publishHtml')
+        return '<span class="show-changes-tag show-changes-tag-add">+upload</span>';
+
+    if (type === 'deleteFile' || type === 'deleteFolder' || type === 'unpublishHtml')
         return '<span class="show-changes-tag show-changes-tag-del">−delete</span>';
+
     return '<span class="show-changes-tag">' + escHtml(type) + '</span>';
 }
 
