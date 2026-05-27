@@ -35,6 +35,12 @@
             "title": "Testing Blog Posting from Browser",
             "date": "05-29-2026",
             "thumbnail": ""
+        },
+        {
+            "href": "Announcements-Blogs/test-upload-blog.html",
+            "title": "The Next Event To Try Out!",
+            "date": "08-22-2026",
+            "thumbnail": "images/Blog-Images/Test-Images/Chang Mai.png"
         }
     ],
     "events": [
