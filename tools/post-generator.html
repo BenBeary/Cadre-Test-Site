@@ -9,6 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/postGen-style.css">
     <link rel="stylesheet" href="AuthManager/auth.css">
+    <link rel="stylesheet" href="BasicTools/image-picker/image-picker.css">
 </head>
 <body data-page-role="basic">
 
@@ -47,7 +48,8 @@
             <div class="step-header">
                 <div class="step-number">1</div>
                 <div class="step-title">Post Details</div>
-                <button class="btn-panel-toggle btn-panel-toggle-danger" id="btn-clear-post-step" title="Wipe the current post and start fresh">🗑 Clear Post</button>
+                <button class="btn-panel-toggle" id="btn-open-image-picker" title="Browse images on the server and drag paths into the editor">📁 Browse Images</button>
+                <button class="btn-panel-toggle btn-panel-toggle-danger" id="btn-clear-post-step" style="margin-left: 0" title="Wipe the current post and start fresh">🗑 Clear Post</button>
             </div>
             <div class="field-grid">
                 <div class="field full">
@@ -132,6 +134,19 @@
 
     </div><!-- end main-area -->
 
+    <!-- Image Picker panel — read-only browser. Toggled by the
+         "📁 Browse Images" header button. -->
+    <aside class="image-picker-panel" id="image-picker-panel" style="display:none">
+        <div class="image-picker-header">
+            <div class="image-picker-title">Images</div>
+            <button class="image-picker-tool-btn" id="image-picker-reload" title="Reload from GitHub">↻</button>
+            <button class="image-picker-close"    id="image-picker-close"  title="Close">✕</button>
+        </div>
+        <div class="image-picker-body" id="image-picker-body">
+            <div class="image-picker-placeholder">Loading…</div>
+        </div>
+    </aside>
+
 </div><!-- end app-layout -->
 
 <!-- Full-screen drag-drop overlay -->
@@ -213,8 +228,11 @@
 </div>
 
 <script src="AuthManager/auth.js"></script>
+<script src="AuthManager/github-api.js"></script>
 <script src="js/post-gen-data.js"></script>
 <script src="js/post-gen-output.js"></script>
 <script src="js/post-gen.js"></script>
+<script src="js/image-drag-target.js"></script>
+<script src="BasicTools/image-picker/image-picker.js"></script>
 </body>
 </html>

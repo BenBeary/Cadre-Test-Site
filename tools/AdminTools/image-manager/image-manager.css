@@ -116,6 +116,8 @@
 
 /* Pending action markers on rows */
 .img-row-pending { background: rgba(99, 169, 255, 0.10); }
+/* Order matters — this modifier sits after .img-row-pending so it wins on equal specificity. */
+.img-row-pending-overwrite { background: rgba(245, 197, 24, 0.12); }
 .img-row-tag {
     font-size: 9px;
     font-weight: 700;
@@ -126,7 +128,8 @@
     letter-spacing: 0.05em;
     flex-shrink: 0;
 }
-.img-row-tag-new { background: var(--accent); color: white; }
+.img-row-tag-new       { background: var(--accent); color: white; }
+.img-row-tag-overwrite { background: #f5c518;       color: #000;   }
 
 /* OS file drag hovering a folder row */
 .img-row-folder.folder-drop-hover {
@@ -231,6 +234,16 @@
     font-size: 12px;
     margin-top: 6px;
 }
+
+/* Overwrite-confirmation modal (per-conflict during a batch upload). */
+.img-overwrite-progress {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 8px;
+    font-style: italic;
+}
+.img-overwrite-progress:empty { display: none; }
+#img-overwrite-modal-overlay .modal-actions { flex-wrap: wrap; gap: 6px; }
 
 /* Upload modal confirm just queues — benign, not destructive. Override default red. */
 #img-upload-modal-overlay .btn-modal-confirm { background: var(--accent); }

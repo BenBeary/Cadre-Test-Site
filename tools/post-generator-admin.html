@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="AdminTools/image-manager/image-manager.css">
     <link rel="stylesheet" href="AdminTools/show-changes/show-changes.css">
     <link rel="stylesheet" href="AdminTools/publish-blog/publish-blog.css">
+    <link rel="stylesheet" href="AdminTools/blog-list/blog-list.css">
 </head>
 <body data-page-role="admin">
 
@@ -169,6 +170,19 @@
         </div>
     </aside>
 
+    <!-- Blog List panel — read-only roster of Announcements-Blogs/*.html.
+         Registered with AdminToolManager from AdminTools/blog-list/blog-list.js. -->
+    <aside class="blog-list-panel" id="blog-list-panel" style="display:none">
+        <div class="blog-list-header">
+            <div class="blog-list-title">Announcements-Blogs</div>
+            <button class="image-manager-tool-btn" id="blog-list-reload" title="Reload from GitHub">↻</button>
+            <button class="image-manager-close"    id="blog-list-close"  title="Close">✕</button>
+        </div>
+        <div class="blog-list-body" id="blog-list-body">
+            <div class="blog-list-placeholder">Loading…</div>
+        </div>
+    </aside>
+
     <!-- Right-side admin tools sidebar (admin page only). Tools register with
          AdminToolManager at DOMContentLoaded; the manager renders the buttons. -->
     <aside class="admin-tools-sidebar" id="admin-tools-sidebar">
@@ -258,6 +272,28 @@
     </div>
 </div>
 
+<!-- Publish Blog: confirm overwrite when the chosen filename already has an
+     entry in blog-data.json (either on the server or staged from a prior
+     publish this session). publish-blog.js drives this via a Promise. -->
+<div class="modal-overlay" id="publish-overwrite-modal-overlay" style="display:none">
+    <div class="modal-box">
+        <div class="modal-title">Overwrite existing post?</div>
+        <div class="modal-body">
+            <p>A post already exists at <code id="publish-overwrite-path"></code>:</p>
+            <ul>
+                <li><strong>Title:</strong> <span id="publish-overwrite-existing-title"></span></li>
+                <li><strong>Date:</strong> <span id="publish-overwrite-existing-date"></span></li>
+                <li><strong>Currently in:</strong> <span id="publish-overwrite-existing-array"></span></li>
+            </ul>
+            <p>Overwriting replaces the HTML file and updates the JSON entry (title, date, thumbnail, etc.) with your current input. The post will move to <strong id="publish-overwrite-new-array"></strong> if it's not already there.</p>
+        </div>
+        <div class="modal-actions">
+            <button class="btn-modal-cancel" id="publish-overwrite-cancel">Cancel</button>
+            <button class="btn-modal-confirm" id="publish-overwrite-confirm">Overwrite</button>
+        </div>
+    </div>
+</div>
+
 <!-- Publish Blog: pick Announcements vs Events -->
 <div class="modal-overlay" id="publish-modal-overlay" style="display:none">
     <div class="modal-box">
@@ -314,6 +350,25 @@
     </div>
 </div>
 
+<!-- Image Manager: overwrite confirmation modal — fires per conflicting file
+     during a batch upload. "Yes for all" / "No for all" are hidden when only
+     one conflict is in the batch. -->
+<div class="modal-overlay" id="img-overwrite-modal-overlay" style="display:none">
+    <div class="modal-box">
+        <div class="modal-title">File already exists</div>
+        <div class="modal-body">
+            <p><code id="img-overwrite-name"></code> already exists in <code id="img-overwrite-folder"></code>.</p>
+            <p class="img-overwrite-progress" id="img-overwrite-progress"></p>
+        </div>
+        <div class="modal-actions">
+            <button class="btn-modal-cancel"  id="img-overwrite-skip">Skip</button>
+            <button class="btn-modal-cancel"  id="img-overwrite-skipall"      style="display:none">No for all</button>
+            <button class="btn-modal-confirm" id="img-overwrite-overwriteall" style="display:none">Yes for all</button>
+            <button class="btn-modal-confirm" id="img-overwrite-overwrite">Overwrite</button>
+        </div>
+    </div>
+</div>
+
 <!-- Image Manager: upload modal -->
 <div class="modal-overlay" id="img-upload-modal-overlay" style="display:none">
     <div class="modal-box modal-box-wide">
@@ -345,8 +400,10 @@
 <script src="js/post-gen-data.js"></script>
 <script src="js/post-gen-output.js"></script>
 <script src="js/post-gen.js"></script>
+<script src="js/image-drag-target.js"></script>
 <script src="AdminTools/show-changes/show-changes.js"></script>
 <script src="AdminTools/image-manager/image-manager.js"></script>
 <script src="AdminTools/publish-blog/publish-blog.js"></script>
+<script src="AdminTools/blog-list/blog-list.js"></script>
 </body>
 </html>

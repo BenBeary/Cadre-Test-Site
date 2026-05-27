@@ -77,10 +77,72 @@ const ChangeQueue = (function () {
         return out;
     }
 
+    // Undoing a publishHtml needs to undo its effect on the bundled
+    // updateBlogIndex too — otherwise removing the HTML leaves a stale
+    // JSON entry pointing at a file that won't be uploaded.
+    function cleanupAfterRemoval(removed) {
+        if (!removed || removed.type !== 'publishHtml') return;
+        const idx = items.findIndex(function(a) { return a.type === 'updateBlogIndex'; });
+        if (idx === -1) return;
+        const upd = items[idx];
+        let json;
+        try { json = JSON.parse(upd.content); }
+        catch (_) { return; }
+
+        // Remove the entry this publishHtml added (or moved into target)
+        const href = removed.path;
+        if (Array.isArray(json[removed.target])) {
+            const ei = json[removed.target].findIndex(function(e) { return e && e.href === href; });
+            if (ei >= 0) json[removed.target].splice(ei, 1);
+        }
+
+        // If it was an overwrite, restore the original entry to its original array
+        if (removed.originalEntry && removed.originalTarget) {
+            if (!Array.isArray(json[removed.originalTarget])) json[removed.originalTarget] = [];
+            json[removed.originalTarget].push(removed.originalEntry);
+        }
+
+        // No more publishHtml in the queue → JSON change is moot, drop the action
+        const stillPublishing = items.some(function(a) { return a.type === 'publishHtml'; });
+        if (!stillPublishing) {
+            items.splice(idx, 1);
+            return;
+        }
+
+        // Recompute the JSON content + the counts used by the label
+        upd.content = JSON.stringify(json, null, 4);
+        let na = 0, ne = 0;
+        items.forEach(function(act) {
+            if (act.type === 'publishHtml' && !act.originalEntry) {
+                if (act.target === 'announcements') na++;
+                else if (act.target === 'events')   ne++;
+            }
+        });
+        upd.addedAnnouncements = na;
+        upd.addedEvents        = ne;
+        upd.addedCount         = na + ne;
+    }
+
     return {
         add:       function(a) { items.push(a); emit(); },
-        removeAt:  function(i) { if (i >= 0 && i < items.length) { items.splice(i, 1); emit(); } },
-        pop:       function() { if (items.length) { items.pop(); emit(); } },
+        removeAt:  function(i) {
+            if (i < 0 || i >= items.length) return;
+            const removed = items.splice(i, 1)[0];
+            cleanupAfterRemoval(removed);
+            emit();
+        },
+        pop:       function() {
+            if (!items.length) return;
+            // Skip past trailing updateBlogIndex items — they're derived
+            // bookkeeping, not user-visible work. Pop the last "real" action
+            // instead so Undo behaves intuitively.
+            let i = items.length - 1;
+            while (i >= 0 && items[i].type === 'updateBlogIndex') i--;
+            if (i < 0) { items.pop(); emit(); return; }
+            const removed = items.splice(i, 1)[0];
+            cleanupAfterRemoval(removed);
+            emit();
+        },
         clear:     function() { if (items.length) { items.length = 0; emit(); } },
         replaceOrAdd: function(predicate, item) {
             for (let i = 0; i < items.length; i++) {

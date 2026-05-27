@@ -108,7 +108,18 @@ function imgMgrApplyActions(serverTree, actions) {
         } else if (a.type === 'uploadFile') {
             const parent = imgMgrFindParent(tree, a.path);
             if (parent) {
-                parent.children.push({ name: a.path.split('/').pop(), path: a.path, type: 'image', sha: '(pending)', _pending: 'new' });
+                const name = a.path.split('/').pop();
+                // Overwrite case: drop any existing same-path child so the tree
+                // shows one pending entry instead of two with identical names.
+                parent.children = parent.children.filter(function(c) { return c.path !== a.path; });
+                // Tag as 'overwrite' if the file existed on the server snapshot;
+                // tag as 'new' otherwise. Checking serverTree (not the cloned
+                // working tree) keeps the detection order-independent.
+                const existedOnServer = !!imgMgrFindNode(serverTree, a.path);
+                parent.children.push({
+                    name: name, path: a.path, type: 'image', sha: '(pending)',
+                    _pending: existedOnServer ? 'overwrite' : 'new'
+                });
             }
         } else if (a.type === 'deleteFile' || a.type === 'deleteFolder') {
             const parent = imgMgrFindParent(tree, a.path);
@@ -147,8 +158,15 @@ function imgMgrRenderTree() {
 
 function imgMgrRenderNode(node, depth) {
     const padLeft = 8 + depth * 16;
-    const pendingClass = node._pending ? ' img-row-pending' : '';
-    const tag = node._pending === 'new' ? '<span class="img-row-tag img-row-tag-new">+new</span>' : '';
+    let pendingClass = '';
+    let tag = '';
+    if (node._pending === 'overwrite') {
+        pendingClass = ' img-row-pending img-row-pending-overwrite';
+        tag = '<span class="img-row-tag img-row-tag-overwrite">+overwrite</span>';
+    } else if (node._pending === 'new') {
+        pendingClass = ' img-row-pending';
+        tag = '<span class="img-row-tag img-row-tag-new">+new</span>';
+    }
     if (node.type === 'image') {
         return '<div class="img-row img-row-image' + pendingClass + '" data-path="' + escHtml(node.path)
              + '" data-sha="' + escHtml(node.sha || '') + '" title="' + escHtml(node.path)
@@ -207,59 +225,27 @@ async function imgMgrLoadAndRender() {
     }
 }
 
-// Drag-to-input (drag image rows onto editor path inputs) -------------
-const IMG_MGR_DROP_SELECTORS = '#f-thumbnail, #content-builder [data-field="url"], #content-builder [data-slide-url], #contrib-sidebar [data-cf="photo"]';
-
-function imgMgrFindEditorDropTarget(el) {
-    if (!el || el.nodeType !== 1) return null;
-    return el.closest ? el.closest(IMG_MGR_DROP_SELECTORS) : null;
-}
-
-function imgMgrSetupEditorDropTargets() {
-    document.addEventListener('dragstart', function(e) {
-        const row = e.target.closest && e.target.closest('.img-row-image');
-        if (!row) return;
-        const path = row.dataset.path;
-        if (!path) return;
-        e.dataTransfer.setData('text/plain', path);
-        e.dataTransfer.setData('application/x-image-path', path);
-        e.dataTransfer.effectAllowed = 'copy';
-    });
-
-    document.addEventListener('dragover', function(e) {
-        const target = imgMgrFindEditorDropTarget(e.target);
-        if (!target) return;
-        if (!e.dataTransfer.types.includes('application/x-image-path')) return;
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'copy';
-        target.classList.add('drop-target-hover');
-    });
-
-    document.addEventListener('dragleave', function(e) {
-        const target = imgMgrFindEditorDropTarget(e.target);
-        if (target) target.classList.remove('drop-target-hover');
-    });
-
-    document.addEventListener('drop', function(e) {
-        const target = imgMgrFindEditorDropTarget(e.target);
-        if (!target) return;
-        const path = e.dataTransfer.getData('application/x-image-path');
-        if (!path) return;
-        e.preventDefault();
-        target.classList.remove('drop-target-hover');
-        target.value = path;
-        target.dispatchEvent(new Event('input', { bubbles: true }));
-        target.dispatchEvent(new Event('change', { bubbles: true }));
-    });
-}
+// Drag-to-input wiring lives in tools/js/image-drag-target.js — it's shared
+// with the basic page's image-picker, so it's loaded once at the page level
+// rather than re-bound per admin tool. The handlers match both
+// .img-row-image (admin) and .img-picker-image (basic) source rows.
 
 // Context menu (uses shared .admin-context-menu styles in admin-tools.css) ----
 function imgMgrContextMenuItems(node) {
     if (node.type === 'image') {
-        return [
-            { label: 'Copy Relative Path', action: function() { navigator.clipboard.writeText(node.path).catch(function() {}); } },
-            { label: 'Delete', action: function() { imgMgrConfirmDeleteFile(node); } }
+        const items = [
+            { label: 'Copy Relative Path', action: function() { navigator.clipboard.writeText(node.path).catch(function() {}); } }
         ];
+        if (node._pending) {
+            // The row is a staged upload (+new or +overwrite) — there's nothing
+            // on the server to delete. "Undo" pulls the upload action out of the
+            // queue; for overwrites that brings the original entry back, for
+            // new uploads the row disappears entirely.
+            items.push({ label: 'Undo', action: function() { imgMgrUndoPendingUpload(node); } });
+        } else {
+            items.push({ label: 'Delete', action: function() { imgMgrConfirmDeleteFile(node); } });
+        }
+        return items;
     }
     const isRoot = node.path === 'images';
     const items = [
@@ -316,6 +302,14 @@ function imgMgrConfirmDeleteFile(node) {
     imgMgrPendingDelete = { type: 'file', node: node };
     imgMgrShowDeleteModal('Delete ' + node.name + '?',
         'Queues deletion of <code>' + escHtml(node.path) + '</code>. Commits to GitHub when you Commit.');
+}
+
+function imgMgrUndoPendingUpload(node) {
+    const list = ChangeQueue.list();
+    const idx = list.findIndex(function(a) {
+        return a.type === 'uploadFile' && a.path === node.path;
+    });
+    if (idx >= 0) ChangeQueue.removeAt(idx);
 }
 
 function imgMgrConfirmDeleteFolder(node) {
@@ -421,18 +415,12 @@ function imgMgrRenderUploadPreview() {
     if (btn) btn.disabled = imgMgrUploadStaged.length === 0;
 }
 
-function imgMgrConfirmUpload() {
+async function imgMgrConfirmUpload() {
     if (!imgMgrUploadDest || !imgMgrUploadStaged.length) return;
     const dest = imgMgrUploadDest;
-    const destFolder = imgMgrFindNode(imgMgrServerTree, dest);
-    imgMgrUploadStaged.forEach(function(f) {
-        if (destFolder && destFolder.children.some(function(c) { return c.name === f.name; })) {
-            alert('"' + f.name + '" already exists in ' + dest + '. Skipped.');
-            return;
-        }
-        ChangeQueue.add({ type: 'uploadFile', path: dest + '/' + f.name, base64: f.base64, name: f.name, size: f.size });
-    });
+    const staged = imgMgrUploadStaged.slice();
     imgMgrHideUploadModal();
+    await imgMgrStageImageUploads(staged, dest);
 }
 
 async function imgMgrHandleFolderDrop(e, folderRow) {
@@ -442,17 +430,113 @@ async function imgMgrHandleFolderDrop(e, folderRow) {
     const folderPath = folderRow.dataset.path;
     const valid = Array.from(e.dataTransfer.files).filter(function(f) { return f.type === 'image/png' || f.type === 'image/jpeg'; });
     if (!valid.length) return;
-    const folder = imgMgrFindNode(imgMgrServerTree, folderPath);
+
+    // Pre-read each File to base64 so the staging helper can treat both
+    // entry points (Add-Image modal + OS drag) the same way.
+    const staged = [];
     for (let i = 0; i < valid.length; i++) {
         const f = valid[i];
-        if (folder && folder.children.some(function(c) { return c.name === f.name; })) {
-            alert('"' + f.name + '" already exists in ' + folderPath + '. Skipped.');
-            continue;
-        }
         const dataUrl = await imgMgrReadFileDataUrl(f);
-        const base64 = dataUrl.split(',')[1];
-        ChangeQueue.add({ type: 'uploadFile', path: folderPath + '/' + f.name, base64: base64, name: f.name, size: f.size });
+        staged.push({ name: f.name, size: f.size, base64: dataUrl.split(',')[1] });
     }
+    await imgMgrStageImageUploads(staged, folderPath);
+}
+
+// Shared collision-handling helper for both upload entry points.
+// `staged` is an array of {name, size, base64}; folderPath is the destination.
+// Conflicts are detected against the LOCAL tree (so already-pending uploads count too).
+async function imgMgrStageImageUploads(staged, folderPath) {
+    const folder = imgMgrFindNode(imgMgrLocalTree || imgMgrServerTree, folderPath);
+
+    // Count total conflicts upfront so we know whether to show the bulk-apply buttons.
+    let totalConflicts = 0;
+    if (folder) {
+        staged.forEach(function(f) {
+            if (folder.children.some(function(c) { return c.name === f.name; })) totalConflicts++;
+        });
+    }
+
+    let bulkChoice = null;        // 'overwrite' | 'skip' once user picks a for-all
+    let conflictIndex = 0;
+
+    for (let i = 0; i < staged.length; i++) {
+        const f = staged[i];
+        const path = folderPath + '/' + f.name;
+        const conflict = !!folder && folder.children.some(function(c) { return c.name === f.name; });
+
+        let decision = 'overwrite';   // default action when there's no conflict
+        if (conflict) {
+            conflictIndex++;
+            if (bulkChoice) {
+                decision = bulkChoice;
+            } else {
+                const result = await imgMgrConfirmOverwrite(f.name, folderPath, {
+                    currentIndex: conflictIndex,
+                    totalConflicts: totalConflicts
+                });
+                if (result === 'overwriteAll') { bulkChoice = 'overwrite'; decision = 'overwrite'; }
+                else if (result === 'skipAll') { bulkChoice = 'skip';      decision = 'skip'; }
+                else                           { decision = result; /* 'overwrite' or 'skip' */ }
+            }
+        }
+        if (decision === 'skip') continue;
+
+        // replaceOrAdd dedupes if the same path was already staged earlier.
+        ChangeQueue.replaceOrAdd(
+            function(a) { return a.type === 'uploadFile' && a.path === path; },
+            { type: 'uploadFile', path: path, base64: f.base64, name: f.name, size: f.size }
+        );
+    }
+}
+
+function imgMgrConfirmOverwrite(filename, folderPath, batchInfo) {
+    return new Promise(function(resolve) {
+        const overlay = document.getElementById('img-overwrite-modal-overlay');
+        if (!overlay) { resolve('skip'); return; }
+
+        document.getElementById('img-overwrite-name').textContent   = filename;
+        document.getElementById('img-overwrite-folder').textContent = folderPath;
+
+        const showAll = batchInfo && batchInfo.totalConflicts > 1;
+        const skipAllBtn      = document.getElementById('img-overwrite-skipall');
+        const overwriteAllBtn = document.getElementById('img-overwrite-overwriteall');
+        skipAllBtn.style.display      = showAll ? '' : 'none';
+        overwriteAllBtn.style.display = showAll ? '' : 'none';
+
+        const progressEl = document.getElementById('img-overwrite-progress');
+        if (progressEl) {
+            progressEl.textContent = showAll
+                ? 'Conflict ' + batchInfo.currentIndex + ' of ' + batchInfo.totalConflicts
+                : '';
+        }
+
+        const overwriteBtn = document.getElementById('img-overwrite-overwrite');
+        const skipBtn      = document.getElementById('img-overwrite-skip');
+
+        function cleanup() {
+            overwriteBtn.removeEventListener('click', onOverwrite);
+            skipBtn.removeEventListener('click', onSkip);
+            overwriteAllBtn.removeEventListener('click', onOverwriteAll);
+            skipAllBtn.removeEventListener('click', onSkipAll);
+            overlay.removeEventListener('click', onBackdrop);
+            document.removeEventListener('keydown', onKey);
+        }
+        function onOverwrite()    { cleanup(); overlay.style.display = 'none'; resolve('overwrite'); }
+        function onSkip()         { cleanup(); overlay.style.display = 'none'; resolve('skip'); }
+        function onOverwriteAll() { cleanup(); overlay.style.display = 'none'; resolve('overwriteAll'); }
+        function onSkipAll()      { cleanup(); overlay.style.display = 'none'; resolve('skipAll'); }
+        function onBackdrop(e)    { if (e.target === overlay) onSkip(); }
+        function onKey(e)         { if (e.key === 'Escape') onSkip(); }
+
+        overwriteBtn.addEventListener('click', onOverwrite);
+        skipBtn.addEventListener('click', onSkip);
+        overwriteAllBtn.addEventListener('click', onOverwriteAll);
+        skipAllBtn.addEventListener('click', onSkipAll);
+        overlay.addEventListener('click', onBackdrop);
+        document.addEventListener('keydown', onKey);
+
+        overlay.style.display = 'flex';
+    });
 }
 
 // Bootstrap -----------------------------------------------------------
@@ -520,7 +604,7 @@ function imgMgrInit() {
         });
     }
 
-    imgMgrSetupEditorDropTargets();
+    // Drag-to-input handlers are bound page-wide by image-drag-target.js.
 
     document.addEventListener('click', function(e) {
         if (imgMgrCtxMenuEl && !imgMgrCtxMenuEl.contains(e.target)) imgMgrHideContextMenu();
