@@ -29,24 +29,6 @@
             "title": "Basic Blog Slideshow",
             "date": "06-10-2026",
             "thumbnail": "images/misc/CAO-placeholder.png"
-        },
-        {
-            "href": "Announcements-Blogs/untitled-blog-post.html",
-            "title": "",
-            "date": "05-25-2026",
-            "thumbnail": ""
-        },
-        {
-            "href": "Announcements-Blogs/new-test-for-contributer.html",
-            "title": "New Test For Contributer",
-            "date": "05-24-2026",
-            "thumbnail": ""
-        },
-        {
-            "href": "Announcements-Blogs/the-next-event-to-try-out.html",
-            "title": "The Next Event To Try Out!",
-            "date": "07-22-2026",
-            "thumbnail": ""
         }
     ],
     "events": [
