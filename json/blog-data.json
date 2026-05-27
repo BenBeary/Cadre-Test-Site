@@ -29,6 +29,12 @@
             "title": "Basic Blog Slideshow",
             "date": "06-10-2026",
             "thumbnail": "images/misc/CAO-placeholder.png"
+        },
+        {
+            "href": "Announcements-Blogs/untitled-blog-post.html",
+            "title": "Testing Blog Posting from Browser",
+            "date": "05-29-2026",
+            "thumbnail": ""
         }
     ],
     "events": [
