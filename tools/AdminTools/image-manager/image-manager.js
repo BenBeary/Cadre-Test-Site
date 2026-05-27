@@ -23,6 +23,8 @@ let imgMgrCtxMenuEl = null;
 let imgMgrPendingDelete = null;  // {type:'file'|'folder', node, containedFiles?}
 let imgMgrUploadStaged = [];     // [{name, size, base64, dataUrl}]
 let imgMgrUploadDest = null;     // destination folder path for upload modal
+let imgMgrPickCallback = null;   // when set, one-shot click delivers an image path here
+let imgMgrPostUploadCallback = null; // when set, fires after confirmUpload with the first staged path
 
 // HTTP / API ----------------------------------------------------------
 async function imgMgrFetchTree() {
@@ -168,10 +170,18 @@ function imgMgrRenderNode(node, depth) {
         tag = '<span class="img-row-tag img-row-tag-new">+new</span>';
     }
     if (node.type === 'image') {
+        // Pending uploads have sha '(pending)' — there's no file yet, so
+        // fall back to the placeholder thumbnail.
+        const isPending = node._pending === 'new' || node._pending === 'overwrite';
+        const thumbSrc = isPending
+            ? '../images/misc/CAO-placeholder.png'
+            : '../' + node.path;
+        const thumb = '<img class="img-row-thumb" src="' + escHtml(thumbSrc)
+                    + '" alt="" loading="lazy">';
         return '<div class="img-row img-row-image' + pendingClass + '" data-path="' + escHtml(node.path)
              + '" data-sha="' + escHtml(node.sha || '') + '" title="' + escHtml(node.path)
              + '" draggable="true" style="padding-left: ' + padLeft + 'px">'
-             + '<span class="img-row-icon">🖼</span>'
+             + '<span class="img-row-icon">' + thumb + '</span>'
              + '<span class="img-row-name">' + escHtml(node.name) + '</span>'
              + tag
              + '</div>';
@@ -372,6 +382,7 @@ function imgMgrHideUploadModal() {
     if (o) o.style.display = 'none';
     imgMgrUploadStaged = [];
     imgMgrUploadDest = null;
+    imgMgrPostUploadCallback = null;
 }
 
 function imgMgrReadFileDataUrl(file) {
@@ -419,8 +430,15 @@ async function imgMgrConfirmUpload() {
     if (!imgMgrUploadDest || !imgMgrUploadStaged.length) return;
     const dest = imgMgrUploadDest;
     const staged = imgMgrUploadStaged.slice();
+    const cb = imgMgrPostUploadCallback;
+    // imgMgrHideUploadModal() clears the callback ref, so capture above first.
     imgMgrHideUploadModal();
     await imgMgrStageImageUploads(staged, dest);
+    if (cb && staged.length) {
+        // Deliver the first staged file's final path so the caller can wire
+        // it back into the image input that started the upload.
+        cb(dest + '/' + staged[0].name);
+    }
 }
 
 async function imgMgrHandleFolderDrop(e, folderRow) {
@@ -540,10 +558,7 @@ function imgMgrConfirmOverwrite(filename, folderPath, batchInfo) {
 }
 
 // Bootstrap -----------------------------------------------------------
-function imgMgrBindClick(id, fn) {
-    const el = document.getElementById(id);
-    if (el) el.addEventListener('click', fn);
-}
+// bindClick provided by tools/js/admin-utils.js.
 function imgMgrBindOverlayClose(overlayId, fn) {
     const o = document.getElementById(overlayId);
     if (o) o.addEventListener('click', function(e) { if (e.target === o) fn(); });
@@ -561,22 +576,54 @@ function imgMgrInit() {
         onOpen:  function() {
             if (!imgMgrLoaded) imgMgrLoadAndRender();
             else imgMgrRebuildLocal();
+        },
+        onClose: function() {
+            // If pick mode was active (panel opened from a 📁 button) and the
+            // user closed the panel without picking, notify the callback so
+            // the originating button drops its toggle-state.
+            const cb = imgMgrPickCallback;
+            imgMgrSetPickMode(false);
+            if (cb) cb(null);
         }
     });
 
     // Re-render whenever any tool (or this one) modifies ChangeQueue.
     ChangeQueue.subscribe(imgMgrRebuildLocal);
 
-    imgMgrBindClick('image-manager-close', function() { AdminToolManager.close('image-manager'); });
-    imgMgrBindClick('image-manager-reload', function() {
+    // After a successful commit, the server tree is stale — drop it so the
+    // next render fetches fresh. Only re-fetch immediately if the panel is
+    // already loaded (otherwise wait for the user to open it).
+    ChangeQueue.onCommitSuccess(function() {
+        if (imgMgrLoaded) {
+            imgMgrLoaded = false;
+            imgMgrLoadAndRender();
+        }
+    });
+
+    bindClick('image-manager-close', function() { AdminToolManager.close('image-manager'); });
+    bindClick('image-manager-reload', function() {
         if (imgMgrLoading) return;
         imgMgrLoaded = false;
         imgMgrLoadAndRender();
     });
+    // Step 1 "📁 Browse Images" shortcut — toggle the panel (mirrors the
+    // basic page's image-picker toggle).
+    bindClick('btn-open-image-manager', function() { AdminToolManager.toggle('image-manager'); });
 
     const body = document.getElementById('image-manager-body');
     if (body) {
         body.addEventListener('click', function(e) {
+            // Pick mode: click on image row delivers its path to caller.
+            const imageRow = e.target.closest('.img-row-image');
+            if (imageRow && imgMgrPickCallback) {
+                const cb = imgMgrPickCallback;
+                imgMgrPickCallback = null;       // prevent onClose from firing cb(null)
+                const path = imageRow.dataset.path;
+                imgMgrSetPickMode(false);
+                AdminToolManager.close('image-manager');
+                cb(path || null);                // always notify so the button clears
+                return;
+            }
             const folderRow = e.target.closest('.img-row-folder');
             if (folderRow) imgMgrToggleFolder(folderRow.dataset.path);
         });
@@ -619,10 +666,10 @@ function imgMgrInit() {
     imgMgrBindOverlayClose('img-delete-modal-overlay', imgMgrHideDeleteModal);
     imgMgrBindOverlayClose('img-upload-modal-overlay', imgMgrHideUploadModal);
 
-    imgMgrBindClick('img-delete-cancel',  imgMgrHideDeleteModal);
-    imgMgrBindClick('img-delete-confirm', imgMgrConfirmDelete);
-    imgMgrBindClick('img-upload-cancel',  imgMgrHideUploadModal);
-    imgMgrBindClick('img-upload-confirm', imgMgrConfirmUpload);
+    bindClick('img-delete-cancel',  imgMgrHideDeleteModal);
+    bindClick('img-delete-confirm', imgMgrConfirmDelete);
+    bindClick('img-upload-cancel',  imgMgrHideUploadModal);
+    bindClick('img-upload-confirm', imgMgrConfirmUpload);
 
     const dropzone = document.getElementById('img-upload-dropzone');
     if (dropzone) {
@@ -655,8 +702,47 @@ function imgMgrInit() {
     });
 }
 
+function imgMgrSetPickMode(on) {
+    const panel = document.getElementById('image-manager-panel');
+    if (panel) panel.classList.toggle('image-manager-pick-mode', !!on);
+    if (!on) imgMgrPickCallback = null;
+}
+
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', imgMgrInit);
 } else {
     imgMgrInit();
 }
+
+// Public API consumed by post-gen.js (the 📁 picker buttons and the
+// image-drag-target drop-File handler).
+window.ImageManager = {
+    openInPickMode: function(callback) {
+        if (typeof callback !== 'function') return;
+        if (document.body.dataset.pageRole !== 'admin') return;
+        imgMgrPickCallback = callback;
+        imgMgrSetPickMode(true);
+        AdminToolManager.open('image-manager');
+    },
+    isOpen: function() {
+        const panel = document.getElementById('image-manager-panel');
+        return !!panel && panel.style.display !== 'none' && getComputedStyle(panel).display !== 'none';
+    },
+    close: function() {
+        imgMgrSetPickMode(false);
+        if (typeof AdminToolManager !== 'undefined') AdminToolManager.close('image-manager');
+    },
+    // Open the upload modal pre-staged with `file`, with destination defaulted
+    // to images/Blog-Images. On confirm, calls onStaged(stagedPath).
+    openUploadWithFile: async function(file, onStaged) {
+        if (document.body.dataset.pageRole !== 'admin') return;
+        if (!file) return;
+        if (file.type !== 'image/png' && file.type !== 'image/jpeg') {
+            alert('Only PNG and JPEG files can be uploaded.');
+            return;
+        }
+        imgMgrOpenUploadModal('images/Blog-Images');
+        imgMgrPostUploadCallback = (typeof onStaged === 'function') ? onStaged : null;
+        await imgMgrAddFilesToUploadStage([file]);
+    }
+};

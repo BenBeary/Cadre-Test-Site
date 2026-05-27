@@ -22,10 +22,17 @@
 const ChangeQueue = (function () {
     const items = [];
     const subs = [];
+    const commitSubs = [];
 
     function emit() {
         subs.forEach(function(fn) {
             try { fn(); } catch (e) { console.error('ChangeQueue subscriber', e); }
+        });
+    }
+
+    function emitCommitSuccess(result) {
+        commitSubs.forEach(function(fn) {
+            try { fn(result); } catch (e) { console.error('ChangeQueue commit subscriber', e); }
         });
     }
 
@@ -162,6 +169,19 @@ const ChangeQueue = (function () {
                 if (i >= 0) subs.splice(i, 1);
             };
         },
+        // Subscribe to successful commits. Each subscriber receives the
+        // ghBatchCommit result (commitSha, treeSha, retried). Tools use this
+        // to refresh their server-state caches.
+        onCommitSuccess: function(fn) {
+            commitSubs.push(fn);
+            return function unsub() {
+                const i = commitSubs.indexOf(fn);
+                if (i >= 0) commitSubs.splice(i, 1);
+            };
+        },
+        // Emit a commit-success event. Called by Show Changes after a
+        // successful ghBatchCommit. Tools should not call this directly.
+        notifyCommitSuccess: emitCommitSuccess,
         labelFor:        labelFor,
         summarize:       summarize,
         toBatchChanges:  toBatchChanges

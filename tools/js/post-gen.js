@@ -45,23 +45,16 @@ function extractYouTubeId(url) {
     return m ? m[1] : '';
 }
 
-function copyToClipboard(text, btn) {
+async function copyToClipboard(text, btn) {
     const orig = btn.textContent;
-    function done() { btn.textContent = 'Copied!'; setTimeout(function() { btn.textContent = orig; }, 2000); }
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(done).catch(function() { execCopy(text, done); });
-    } else {
-        execCopy(text, done);
+    try {
+        await navigator.clipboard.writeText(text);
+        btn.textContent = 'Copied!';
+    } catch (err) {
+        btn.textContent = 'Copy failed';
+        console.warn('Clipboard write failed:', err);
     }
-}
-
-function execCopy(text, cb) {
-    const el = document.createElement('textarea');
-    el.value = text; el.style.position = 'fixed'; el.style.opacity = '0';
-    document.body.appendChild(el); el.focus(); el.select();
-    try { document.execCommand('copy'); } catch(e) {}
-    document.body.removeChild(el);
-    if (cb) cb();
+    setTimeout(function() { btn.textContent = orig; }, 2000);
 }
 
 function getVal(id) { return (document.getElementById(id) || {}).value || ''; }
@@ -69,7 +62,7 @@ function getVal(id) { return (document.getElementById(id) || {}).value || ''; }
 function hasBlocks() { return state.blocks.length > 0 || state.contributors.length > 0; }
 
 function getFilename() {
-    const raw = getVal('f-filename').trim();
+    const raw = (els.fFilename ? els.fFilename.value : '').trim();
     const slug = slugify(raw);
     return (slug || 'untitled-blog-post') + '.html';
 }
@@ -79,7 +72,38 @@ function setDefaultDate() {
     const iso = d.getFullYear() + '-'
         + String(d.getMonth() + 1).padStart(2, '0') + '-'
         + String(d.getDate()).padStart(2, '0');
-    document.getElementById('f-date').value = iso;
+    els.fDate.value = iso;
+}
+
+// ─── DOM element cache ────────────────────────────────────────────────────────
+// Populated once at the bottom-of-file init. Every later DOM access goes via
+// `els` so we never query the same id twice per session.
+
+const els = {};
+
+function initElementCache() {
+    els.templateNav        = document.getElementById('template-nav');
+    els.contentBuilder     = document.getElementById('content-builder');
+    els.contribSidebar     = document.getElementById('contrib-sidebar');
+    els.contentContribRow  = document.getElementById('content-contrib-row');
+    els.btnContribToggle   = document.getElementById('btn-contrib-toggle');
+    els.outputSection      = document.getElementById('output-section');
+    els.outHtml            = document.getElementById('out-html');
+    els.outJson            = document.getElementById('out-json');
+    els.fTitle             = document.getElementById('f-title');
+    els.fAuthor            = document.getElementById('f-author');
+    els.fDate              = document.getElementById('f-date');
+    els.fEndDate           = document.getElementById('f-end-date');
+    els.fEndDateField      = document.getElementById('field-end-date');
+    els.fThumbnail         = document.getElementById('f-thumbnail');
+    els.fFilename          = document.getElementById('f-filename');
+    els.btnSave            = document.getElementById('btn-save-layout');
+    els.modalOverlay       = document.getElementById('modal-overlay');
+    els.clearModalOverlay  = document.getElementById('clear-modal-overlay');
+    els.dropOverlay        = document.getElementById('drop-overlay');
+    els.previewOverlay     = document.getElementById('preview-overlay');
+    els.previewIframe      = document.getElementById('preview-iframe');
+    els.importFile         = document.getElementById('import-file');
 }
 
 // ─── Data loading ─────────────────────────────────────────────────────────────
@@ -115,7 +139,6 @@ function loadBaseTemplate() {
 // ─── Template Nav & Selection ─────────────────────────────────────────────────
 
 function renderTemplateNav() {
-    const nav = document.getElementById('template-nav');
     let html = '';
     templates.forEach(function(tpl) {
         const sel = tpl.id === state.templateId ? ' selected' : '';
@@ -124,17 +147,19 @@ function renderTemplateNav() {
             + '<span class="tpl-info"><span class="tpl-name">' + escHtml(tpl.name) + '</span>'
             + '<span class="tpl-desc">' + escHtml(tpl.desc) + '</span></span></button>';
     });
-    nav.innerHTML = html;
+    els.templateNav.innerHTML = html;
 }
 
-document.getElementById('template-nav').addEventListener('click', function(e) {
-    const btn = e.target.closest('[data-tpl-id]');
-    if (!btn) return;
-    const tplId = btn.dataset.tplId;
-    if (tplId === state.templateId) return;
-    if (hasBlocks()) { state.pendingTemplate = tplId; showModal(); }
-    else { applyTemplate(tplId); }
-});
+function initTemplateNavEvents() {
+    els.templateNav.addEventListener('click', function(e) {
+        const btn = e.target.closest('[data-tpl-id]');
+        if (!btn) return;
+        const tplId = btn.dataset.tplId;
+        if (tplId === state.templateId) return;
+        if (hasBlocks()) { state.pendingTemplate = tplId; showModal(); }
+        else { applyTemplate(tplId); }
+    });
+}
 
 function applyTemplate(tplId) {
     const tpl = templates.find(function(t) { return t.id === tplId; });
@@ -155,40 +180,34 @@ function applyTemplate(tplId) {
 }
 
 function updateDetailsFields() {
-    document.getElementById('field-end-date').style.display = state.settings.isEvent ? '' : 'none';
+    els.fEndDateField.style.display = state.settings.isEvent ? '' : 'none';
 }
 
 // ─── Editor chrome ────────────────────────────────────────────────────────────
 
 function updateContribSidebarVisibility() {
-    const sidebar = document.getElementById('contrib-sidebar');
-    const btn     = document.getElementById('btn-contrib-toggle');
-    const row     = document.getElementById('content-contrib-row');
-    sidebar.style.display = state.showContributors ? '' : 'none';
-    btn.classList.toggle('active', state.showContributors);
-    row.classList.toggle('contrib-open', state.showContributors);
+    els.contribSidebar.style.display = state.showContributors ? '' : 'none';
+    els.btnContribToggle.classList.toggle('active', state.showContributors);
+    els.contentContribRow.classList.toggle('contrib-open', state.showContributors);
 }
 
 function updateSaveButtonState() {
-    document.getElementById('btn-save-layout').disabled = !hasBlocks();
+    els.btnSave.disabled = !hasBlocks();
 }
 
 function clearOutput() {
-    document.getElementById('output-section').classList.remove('visible');
-    const html = document.getElementById('out-html');
-    const json = document.getElementById('out-json');
-    if (html) html.value = '';
-    if (json) json.value = '';
+    els.outputSection.classList.remove('visible');
+    if (els.outHtml) els.outHtml.value = '';
+    if (els.outJson) els.outJson.value = '';
 }
 
 // ─── Contributors Sidebar ─────────────────────────────────────────────────────
 
 function renderContribSidebar() {
-    const sidebar = document.getElementById('contrib-sidebar');
     let html = '<div class="contrib-sidebar-title">Contributors Sidebar</div>';
     state.contributors.forEach(function(c, i) { html += renderContributor(c, i); });
     html += '<div class="add-block-bar" style="margin-top:8px"><button class="btn-add" id="btn-add-contrib" style="width:100%">+ Add Contributor</button></div>';
-    sidebar.innerHTML = html;
+    els.contribSidebar.innerHTML = html;
     updateSaveButtonState();
 }
 
@@ -214,7 +233,12 @@ function renderContributor(c, i) {
         + '</div></div>'
         + '<div class="contrib-item-body">'
         + '<div class="field"><label>Name</label><input type="text" data-cf="name" value="' + escHtml(c.name) + '" placeholder="Full name"></div>'
-        + '<div class="field"><label>Photo Path</label><input type="text" data-cf="photo" value="' + escHtml(c.photo) + '" placeholder="images/people/jane.jpg"></div>'
+        + '<div class="field"><label>Photo Path</label>'
+        +   '<div class="img-input-row">'
+        +     '<input type="text" data-cf="photo" value="' + escHtml(c.photo) + '" placeholder="images/people/jane.jpg">'
+        +     '<button type="button" class="btn-pick-image" data-pick-image-for="contrib-photo" title="Pick an image from the server">📁</button>'
+        +   '</div>'
+        + '</div>'
         + '<div class="field"><label>Social Links</label>'
         + '<div class="social-list">' + socialsHtml + '</div>'
         + '<button class="btn-add" data-add-social="' + i + '" style="margin-top:6px;width:100%;font-size:12px;padding:5px 10px">+ Add Social</button>'
@@ -243,9 +267,8 @@ function syncContributorsFromDOM() {
 // ─── Content Builder ──────────────────────────────────────────────────────────
 
 function renderContentBuilder() {
-    const el = document.getElementById('content-builder');
     if (!state.templateId) {
-        el.innerHTML = '<div class="placeholder-prompt">Select a template on the left to start writing.</div>';
+        els.contentBuilder.innerHTML = '<div class="placeholder-prompt">Select a template on the left to start writing.</div>';
         return;
     }
 
@@ -259,7 +282,7 @@ function renderContentBuilder() {
     });
     html += '</div>';
 
-    el.innerHTML = html;
+    els.contentBuilder.innerHTML = html;
     updateSaveButtonState();
 }
 
@@ -299,99 +322,82 @@ function syncBlocksFromDOM() {
 }
 
 // ─── Block list events ────────────────────────────────────────────────────────
+// Strategy: one click handler. Sync DOM → state ONCE up front, then dispatch
+// to a per-arm helper. No per-arm sync calls littered through the handler.
 
-function initEvents() {
-    const builder = document.getElementById('content-builder');
-
+function initBlockToolbarEvents(builder) {
     builder.addEventListener('click', function(e) {
-        // Add block (excluding the slideshow's inner add-slide button)
-        const addBtn = e.target.closest('[data-add]');
-        if (addBtn && !addBtn.hasAttribute('data-add-slide')) {
-            const type = addBtn.dataset.add;
-            const def = BLOCK_TYPES[type];
-            if (def) {
-                syncBlocksFromDOM();
-                state.blocks.push(def.defaults());
-                renderContentBuilder();
-                clearOutput();
-            }
-            return;
-        }
+        const t = e.target;
+        // Probe every supported arm. `data-add-slide` overlaps `data-add`,
+        // so resolve slideshow buttons first.
+        const slideAdd    = t.closest('[data-add-slide]');
+        const slideRemove = t.closest('[data-remove-slide]');
+        const addBtn      = slideAdd ? null : t.closest('[data-add]');
+        const removeBtn   = t.closest('[data-remove-block]');
+        const upBtn       = t.closest('[data-move-up]');
+        const downBtn     = t.closest('[data-move-down]');
+        const colABtn     = t.closest('[data-set-col-a]');
+        const colBBtn     = t.closest('[data-set-col-b]');
 
-        // Remove block
-        const removeBtn = e.target.closest('[data-remove-block]');
-        if (removeBtn) {
-            syncBlocksFromDOM();
+        if (!addBtn && !removeBtn && !upBtn && !downBtn && !colABtn && !colBBtn && !slideAdd && !slideRemove) return;
+
+        // One sync up front — handlers below just mutate state.
+        syncBlocksFromDOM();
+
+        if (addBtn) {
+            const def = BLOCK_TYPES[addBtn.dataset.add];
+            if (!def) return;
+            state.blocks.push(def.defaults());
+            clearOutput();
+        } else if (removeBtn) {
             state.blocks.splice(Number(removeBtn.dataset.removeBlock), 1);
-            renderContentBuilder(); clearOutput(); return;
-        }
-
-        // Move up
-        const upBtn = e.target.closest('[data-move-up]');
-        if (upBtn) {
+            clearOutput();
+        } else if (upBtn) {
             const n = Number(upBtn.dataset.moveUp);
-            if (n > 0) { syncBlocksFromDOM(); const t = state.blocks[n-1]; state.blocks[n-1] = state.blocks[n]; state.blocks[n] = t; renderContentBuilder(); }
-            return;
-        }
-
-        // Move down
-        const downBtn = e.target.closest('[data-move-down]');
-        if (downBtn) {
+            if (n <= 0) return;
+            const tmp = state.blocks[n - 1];
+            state.blocks[n - 1] = state.blocks[n];
+            state.blocks[n] = tmp;
+        } else if (downBtn) {
             const n = Number(downBtn.dataset.moveDown);
-            if (n < state.blocks.length - 1) { syncBlocksFromDOM(); const t = state.blocks[n+1]; state.blocks[n+1] = state.blocks[n]; state.blocks[n] = t; renderContentBuilder(); }
-            return;
-        }
-
-        // Column A toggle
-        const colABtn = e.target.closest('[data-set-col-a]');
-        if (colABtn) {
-            syncBlocksFromDOM();
+            if (n >= state.blocks.length - 1) return;
+            const tmp = state.blocks[n + 1];
+            state.blocks[n + 1] = state.blocks[n];
+            state.blocks[n] = tmp;
+        } else if (colABtn) {
             const n = Number(colABtn.dataset.setColA);
             state.blocks[n].col = state.blocks[n].col === 'A' ? null : 'A';
-            renderContentBuilder(); return;
-        }
-
-        // Column B toggle
-        const colBBtn = e.target.closest('[data-set-col-b]');
-        if (colBBtn) {
-            syncBlocksFromDOM();
+        } else if (colBBtn) {
             const n = Number(colBBtn.dataset.setColB);
             state.blocks[n].col = state.blocks[n].col === 'B' ? null : 'B';
-            renderContentBuilder(); return;
+        } else if (slideAdd) {
+            const bi = Number(slideAdd.closest('[data-block-idx]').dataset.blockIdx);
+            state.blocks[bi].slides.push({ url: '', alt: '' });
+        } else if (slideRemove) {
+            const bi = Number(slideRemove.closest('[data-block-idx]').dataset.blockIdx);
+            state.blocks[bi].slides.splice(Number(slideRemove.dataset.removeSlide), 1);
+            // Slideshow needs at least one slide to render.
+            if (state.blocks[bi].slides.length === 0) {
+                state.blocks[bi].slides.push({ url: '', alt: '' });
+            }
         }
 
-        // Slideshow: add slide
-        const addSlideBtn = e.target.closest('[data-add-slide]');
-        if (addSlideBtn) {
-            syncBlocksFromDOM();
-            const blockIdx = Number(addSlideBtn.closest('[data-block-idx]').dataset.blockIdx);
-            state.blocks[blockIdx].slides.push({ url: '', alt: '' });
-            renderContentBuilder(); return;
-        }
-
-        // Slideshow: remove slide
-        const removeSlideBtn = e.target.closest('[data-remove-slide]');
-        if (removeSlideBtn) {
-            syncBlocksFromDOM();
-            const blockIdx = Number(removeSlideBtn.closest('[data-block-idx]').dataset.blockIdx);
-            state.blocks[blockIdx].slides.splice(Number(removeSlideBtn.dataset.removeSlide), 1);
-            if (state.blocks[blockIdx].slides.length === 0) state.blocks[blockIdx].slides.push({ url: '', alt: '' });
-            renderContentBuilder(); return;
-        }
+        renderContentBuilder();
     });
+}
 
-    // ── Drag-and-drop reorder ──────────────────────────────────────────────
+function initBlockDragReorder(builder) {
     let dragSrcIndex = null;
-    let mouseDownEl = null;
+    let mouseDownEl  = null;
 
     function clearDropIndicators() {
         builder.querySelectorAll('.drop-target-before, .drop-target-after')
             .forEach(function(el) { el.classList.remove('drop-target-before', 'drop-target-after'); });
     }
 
-    // dragstart's e.target is the draggable element (the .block-item itself),
-    // not the actual mousedown target. Track mousedown separately so we can
-    // tell whether the drag started from the drag handle vs an input/button.
+    // dragstart's e.target is the draggable .block-item, not the actual
+    // mousedown target. Tracking mousedown separately lets us tell whether
+    // the drag started from the drag handle vs an input/button inside the block.
     builder.addEventListener('mousedown', function(e) { mouseDownEl = e.target; });
 
     builder.addEventListener('dragstart', function(e) {
@@ -452,68 +458,135 @@ function initEvents() {
     });
 }
 
+function initEvents() {
+    initBlockToolbarEvents(els.contentBuilder);
+    initBlockDragReorder(els.contentBuilder);
+}
+
+// ─── Image-picker buttons ─────────────────────────────────────────────────────
+// Every image-path input renders a small 📁 button next to it. Clicking
+// dispatches to whichever image-tooling module is on the page:
+//   - basic page : window.ImagePicker (read-only browser)
+//   - admin page : window.ImageManager (full management; can upload too)
+// Both expose openInPickMode(callback), isOpen(), close() — see those files.
+
+function findInputForPickButton(btn) {
+    const row = btn.closest('.img-input-row, .slide-item');
+    if (!row) return null;
+    return row.querySelector('input[type="text"]');
+}
+
+// Which button (if any) currently has the picker open in its name.
+let activePickBtn = null;
+function setActivePickBtn(btn) {
+    if (activePickBtn && activePickBtn !== btn) activePickBtn.classList.remove('btn-pick-image-active');
+    activePickBtn = btn || null;
+    if (activePickBtn) activePickBtn.classList.add('btn-pick-image-active');
+}
+function clearActivePickBtn() {
+    if (activePickBtn) activePickBtn.classList.remove('btn-pick-image-active');
+    activePickBtn = null;
+}
+
+function initImagePickerButtons() {
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('.btn-pick-image');
+        if (!btn) return;
+        const picker = window.ImageManager || window.ImagePicker;
+        if (!picker || typeof picker.openInPickMode !== 'function') {
+            alert('Image picker is not available on this page.');
+            return;
+        }
+        // Toggle: clicking again (or any pick button) while the picker is
+        // already open closes it.
+        if (typeof picker.isOpen === 'function' && picker.isOpen()) {
+            if (typeof picker.close === 'function') picker.close();
+            clearActivePickBtn();
+            return;
+        }
+        const input = findInputForPickButton(btn);
+        if (!input) return;
+        setActivePickBtn(btn);
+        picker.openInPickMode(function(path) {
+            clearActivePickBtn();
+            if (path == null) return;       // user cancelled / closed
+            input.value = path;
+            input.dispatchEvent(new Event('input',  { bubbles: true }));
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+            // Update model so the next renderContentBuilder doesn't wipe the
+            // newly-picked value back to '' (renderContentBuilder reads from
+            // state, not the DOM).
+            syncBlocksFromDOM();
+            syncContributorsFromDOM();
+        });
+    });
+}
+
 function initContribEvents() {
-    document.getElementById('btn-contrib-toggle').addEventListener('click', function() {
+    els.btnContribToggle.addEventListener('click', function() {
         syncContributorsFromDOM();
         state.showContributors = !state.showContributors;
         updateContribSidebarVisibility();
         if (state.showContributors) renderContribSidebar();
     });
 
-    document.getElementById('contrib-sidebar').addEventListener('click', function(e) {
-        if (e.target.id === 'btn-add-contrib') {
-            syncContributorsFromDOM();
+    els.contribSidebar.addEventListener('click', function(e) {
+        const t = e.target;
+        const addContrib   = (t.id === 'btn-add-contrib') ? t : null;
+        const upBtn        = t.closest('[data-contrib-up]');
+        const downBtn      = t.closest('[data-contrib-down]');
+        const removeBtn    = t.closest('[data-contrib-remove]');
+        const addSocial    = t.closest('[data-add-social]');
+        const removeSocial = t.closest('[data-remove-social]');
+
+        if (!addContrib && !upBtn && !downBtn && !removeBtn && !addSocial && !removeSocial) return;
+
+        // One sync up front — handlers below just mutate state.
+        syncContributorsFromDOM();
+
+        if (addContrib) {
             state.contributors.push({ name: '', photo: '', socials: [] });
-            renderContribSidebar(); return;
-        }
-        const upBtn = e.target.closest('[data-contrib-up]');
-        if (upBtn) {
+        } else if (upBtn) {
             const n = Number(upBtn.dataset.contribUp);
-            if (n > 0) { syncContributorsFromDOM(); const t = state.contributors[n-1]; state.contributors[n-1] = state.contributors[n]; state.contributors[n] = t; renderContribSidebar(); }
-            return;
-        }
-        const downBtn = e.target.closest('[data-contrib-down]');
-        if (downBtn) {
+            if (n <= 0) return;
+            const tmp = state.contributors[n - 1];
+            state.contributors[n - 1] = state.contributors[n];
+            state.contributors[n] = tmp;
+        } else if (downBtn) {
             const n = Number(downBtn.dataset.contribDown);
-            if (n < state.contributors.length - 1) { syncContributorsFromDOM(); const t = state.contributors[n+1]; state.contributors[n+1] = state.contributors[n]; state.contributors[n] = t; renderContribSidebar(); }
-            return;
-        }
-        const removeBtn = e.target.closest('[data-contrib-remove]');
-        if (removeBtn) {
-            syncContributorsFromDOM();
+            if (n >= state.contributors.length - 1) return;
+            const tmp = state.contributors[n + 1];
+            state.contributors[n + 1] = state.contributors[n];
+            state.contributors[n] = tmp;
+        } else if (removeBtn) {
             state.contributors.splice(Number(removeBtn.dataset.contribRemove), 1);
-            renderContribSidebar(); return;
-        }
-        const addSocialBtn = e.target.closest('[data-add-social]');
-        if (addSocialBtn) {
-            syncContributorsFromDOM();
-            const ci = Number(addSocialBtn.dataset.addSocial);
+        } else if (addSocial) {
+            const ci = Number(addSocial.dataset.addSocial);
             if (!state.contributors[ci].socials) state.contributors[ci].socials = [];
             state.contributors[ci].socials.push({ platform: 'instagram', url: '' });
-            renderContribSidebar(); return;
+        } else if (removeSocial) {
+            const ci = Number(removeSocial.closest('[data-contrib-idx]').dataset.contribIdx);
+            state.contributors[ci].socials.splice(Number(removeSocial.dataset.removeSocial), 1);
         }
-        const removeSocialBtn = e.target.closest('[data-remove-social]');
-        if (removeSocialBtn) {
-            syncContributorsFromDOM();
-            const ci = Number(removeSocialBtn.closest('[data-contrib-idx]').dataset.contribIdx);
-            state.contributors[ci].socials.splice(Number(removeSocialBtn.dataset.removeSocial), 1);
-            renderContribSidebar(); return;
-        }
+
+        renderContribSidebar();
     });
 }
 
 // ─── Switch-template confirmation modal ───────────────────────────────────────
 
-function showModal() { document.getElementById('modal-overlay').style.display = 'flex'; }
-function hideModal() { document.getElementById('modal-overlay').style.display = 'none'; }
+function showModal() { els.modalOverlay.style.display = 'flex'; }
+function hideModal() { els.modalOverlay.style.display = 'none'; }
 
-document.getElementById('modal-cancel').addEventListener('click', function() { state.pendingTemplate = null; hideModal(); });
-document.getElementById('modal-confirm').addEventListener('click', function() {
-    hideModal(); if (state.pendingTemplate) { applyTemplate(state.pendingTemplate); state.pendingTemplate = null; }
-});
-document.getElementById('modal-overlay').addEventListener('click', function(e) {
-    if (e.target === this) { state.pendingTemplate = null; hideModal(); }
-});
+function initSwitchTemplateModal() {
+    document.getElementById('modal-cancel').addEventListener('click', function() { state.pendingTemplate = null; hideModal(); });
+    document.getElementById('modal-confirm').addEventListener('click', function() {
+        hideModal(); if (state.pendingTemplate) { applyTemplate(state.pendingTemplate); state.pendingTemplate = null; }
+    });
+    els.modalOverlay.addEventListener('click', function(e) {
+        if (e.target === els.modalOverlay) { state.pendingTemplate = null; hideModal(); }
+    });
+}
 
 // ─── Clear post ───────────────────────────────────────────────────────────────
 
@@ -537,23 +610,26 @@ function clearPost() {
     applyTemplate('blank'); // resets blocks, contributors, template, output
 }
 
-function showClearModal() { document.getElementById('clear-modal-overlay').style.display = 'flex'; }
-function hideClearModal() { document.getElementById('clear-modal-overlay').style.display = 'none'; }
+function showClearModal() { els.clearModalOverlay.style.display = 'flex'; }
+function hideClearModal() { els.clearModalOverlay.style.display = 'none'; }
 
 function requestClear() {
     if (isPostEmpty()) { clearPost(); return; }
     showClearModal();
 }
-document.getElementById('btn-clear-post').addEventListener('click', requestClear);
-document.getElementById('btn-clear-post-step').addEventListener('click', requestClear);
-document.getElementById('clear-modal-cancel').addEventListener('click', hideClearModal);
-document.getElementById('clear-modal-confirm').addEventListener('click', function() {
-    hideClearModal();
-    clearPost();
-});
-document.getElementById('clear-modal-overlay').addEventListener('click', function(e) {
-    if (e.target === this) hideClearModal();
-});
+
+function initClearPostEvents() {
+    document.getElementById('btn-clear-post').addEventListener('click', requestClear);
+    document.getElementById('btn-clear-post-step').addEventListener('click', requestClear);
+    document.getElementById('clear-modal-cancel').addEventListener('click', hideClearModal);
+    document.getElementById('clear-modal-confirm').addEventListener('click', function() {
+        hideClearModal();
+        clearPost();
+    });
+    els.clearModalOverlay.addEventListener('click', function(e) {
+        if (e.target === els.clearModalOverlay) hideClearModal();
+    });
+}
 
 // ─── Save / Load ──────────────────────────────────────────────────────────────
 
@@ -615,7 +691,7 @@ function downloadFallback(content, filename, mime) {
 async function saveDraftAs() {
     const data = getSaveData();
     const json = JSON.stringify(data, null, 2);
-    const fname = getVal('f-filename').trim();
+    const fname = (els.fFilename.value || '').trim();
     const suggestedName = (slugify(fname) || 'untitled-blog-post') + '-draft.json';
 
     if (window.showSaveFilePicker) {
@@ -636,21 +712,189 @@ async function saveDraftAs() {
     downloadFallback(json, suggestedName, 'application/json');
 }
 
-document.getElementById('btn-save-layout').addEventListener('click', saveDraftAs);
-document.getElementById('btn-load-layout').addEventListener('click', function() { document.getElementById('import-file').click(); });
+function initSaveLoadEvents() {
+    els.btnSave.addEventListener('click', saveDraftAs);
+    document.getElementById('btn-load-layout').addEventListener('click', openLoadMenu);
+    els.importFile.addEventListener('change', function() {
+        const file = this.files[0]; if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) { try { applySaveData(JSON.parse(e.target.result)); } catch(err) { alert('Could not read save file.'); } };
+        reader.readAsText(file); this.value = '';
+    });
+}
 
-document.getElementById('import-file').addEventListener('change', function() {
-    const file = this.files[0]; if (!file) return;
-    const reader = new FileReader();
-    reader.onload = function(e) { try { applySaveData(JSON.parse(e.target.result)); } catch(err) { alert('Could not read save file.'); } };
-    reader.readAsText(file); this.value = '';
-});
+// ─── Draft autosave (localStorage) ────────────────────────────────────────────
+// Auto-persists the current builder state to localStorage on every change
+// (debounced). Drafts surface in the Load button's dropdown so the user can
+// resume previous work without having had to download/upload a JSON file.
+
+const DRAFT_PREFIX        = 'cadre.postgen.draft.';
+const DRAFT_INDEX_KEY     = 'cadre.postgen.draft.__index__';
+const DRAFT_MAX_AGE_MS    = 30 * 24 * 60 * 60 * 1000;   // 30 days
+const DRAFT_AUTOSAVE_MS   = 800;                         // debounce
+const DRAFT_LIST_LIMIT    = 5;                           // shown in menu
+
+let draftSaveTimer = null;
+
+function draftCurrentSlug() {
+    const raw = (els.fFilename && els.fFilename.value || '').trim();
+    return slugify(raw) || 'untitled-blog-post';
+}
+
+function draftCurrentKey() { return DRAFT_PREFIX + draftCurrentSlug(); }
+
+function draftReadIndex() {
+    try { return JSON.parse(localStorage.getItem(DRAFT_INDEX_KEY) || '[]'); }
+    catch (_) { return []; }
+}
+
+function draftWriteIndex(arr) {
+    try { localStorage.setItem(DRAFT_INDEX_KEY, JSON.stringify(arr)); }
+    catch (_) { /* quota or disabled — silently no-op */ }
+}
+
+function draftPruneExpired() {
+    const cutoff = Date.now() - DRAFT_MAX_AGE_MS;
+    const next = [];
+    draftReadIndex().forEach(function(entry) {
+        if (entry.savedAt && entry.savedAt < cutoff) {
+            try { localStorage.removeItem(DRAFT_PREFIX + entry.slug); } catch (_) {}
+            return;
+        }
+        next.push(entry);
+    });
+    draftWriteIndex(next);
+}
+
+function draftUpsertIndex(slug, title) {
+    const arr = draftReadIndex().filter(function(e) { return e.slug !== slug; });
+    arr.unshift({ slug: slug, title: title || slug, savedAt: Date.now() });
+    draftWriteIndex(arr.slice(0, 20));
+}
+
+function autosaveDraft() {
+    if (!state.templateId) return;
+    if (!hasBlocks() && !(els.fTitle && els.fTitle.value)) return;  // nothing worth saving
+    try {
+        const data = getSaveData();
+        const slug = draftCurrentSlug();
+        localStorage.setItem(DRAFT_PREFIX + slug, JSON.stringify(data));
+        draftUpsertIndex(slug, (data.fields && data.fields.title) || '');
+    } catch (err) {
+        // Quota errors are non-fatal — we don't surface them.
+        console.warn('Autosave failed:', err);
+    }
+}
+
+function scheduleAutosave() {
+    clearTimeout(draftSaveTimer);
+    draftSaveTimer = setTimeout(autosaveDraft, DRAFT_AUTOSAVE_MS);
+}
+
+function initAutosave() {
+    draftPruneExpired();
+    // Watch the form fields …
+    ['f-title', 'f-author', 'f-date', 'f-end-date', 'f-thumbnail', 'f-filename'].forEach(function(id) {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('input', scheduleAutosave);
+    });
+    // … and the content builder + contributor sidebar (re-rendered HTML
+    // counts as a state change since post-gen.js replaces .innerHTML).
+    if (els.contentBuilder) {
+        els.contentBuilder.addEventListener('input', scheduleAutosave);
+        new MutationObserver(scheduleAutosave).observe(els.contentBuilder, { childList: true, subtree: false });
+    }
+    if (els.contribSidebar) {
+        els.contribSidebar.addEventListener('input', scheduleAutosave);
+        new MutationObserver(scheduleAutosave).observe(els.contribSidebar, { childList: true, subtree: false });
+    }
+}
+
+// ─── Load button: file picker + recent-drafts popover ─────────────────────────
+
+let loadMenuEl = null;
+
+function closeLoadMenu() {
+    if (loadMenuEl) { loadMenuEl.remove(); loadMenuEl = null; }
+    document.removeEventListener('click', onLoadMenuDocClick, true);
+    document.removeEventListener('keydown', onLoadMenuKey);
+}
+
+function onLoadMenuDocClick(e) {
+    if (loadMenuEl && !loadMenuEl.contains(e.target) && !(e.target && e.target.id === 'btn-load-layout')) {
+        closeLoadMenu();
+    }
+}
+function onLoadMenuKey(e) { if (e.key === 'Escape') closeLoadMenu(); }
+
+function openLoadMenu() {
+    closeLoadMenu();
+    draftPruneExpired();
+    const drafts = draftReadIndex().slice(0, DRAFT_LIST_LIMIT);
+    const btn = document.getElementById('btn-load-layout');
+    if (!btn) return;
+
+    const menu = document.createElement('div');
+    menu.className = 'load-menu';
+    let html = '<button class="load-menu-item" data-load-action="file">📂 Open file…</button>';
+    if (drafts.length) {
+        html += '<div class="load-menu-divider">Recent drafts</div>';
+        drafts.forEach(function(d) {
+            const when = new Date(d.savedAt);
+            const label = d.title && d.title.trim() ? d.title : d.slug;
+            html += '<button class="load-menu-item load-menu-draft" data-load-action="draft" data-slug="'
+                  + escHtml(d.slug) + '">'
+                  + '<span class="load-menu-draft-title">' + escHtml(label) + '</span>'
+                  + '<span class="load-menu-draft-when">' + when.toLocaleString() + '</span>'
+                  + '</button>';
+        });
+        html += '<button class="load-menu-item load-menu-clear" data-load-action="forget-all">Forget all drafts</button>';
+    } else {
+        html += '<div class="load-menu-empty">No saved drafts yet.</div>';
+    }
+    menu.innerHTML = html;
+
+    const rect = btn.getBoundingClientRect();
+    menu.style.position = 'fixed';
+    menu.style.top  = (rect.bottom + 4) + 'px';
+    menu.style.left = (rect.right - 260) + 'px';   // right-align under button
+    document.body.appendChild(menu);
+    loadMenuEl = menu;
+
+    menu.addEventListener('click', function(e) {
+        const item = e.target.closest('[data-load-action]');
+        if (!item) return;
+        const action = item.dataset.loadAction;
+        if (action === 'file') {
+            closeLoadMenu();
+            els.importFile.click();
+        } else if (action === 'draft') {
+            const slug = item.dataset.slug;
+            const raw = localStorage.getItem(DRAFT_PREFIX + slug);
+            closeLoadMenu();
+            if (!raw) { alert('Draft is no longer available.'); return; }
+            try { applySaveData(JSON.parse(raw)); } catch (_) { alert('Could not read draft.'); }
+        } else if (action === 'forget-all') {
+            if (!confirm('Forget all saved drafts? This cannot be undone.')) return;
+            draftReadIndex().forEach(function(d) {
+                try { localStorage.removeItem(DRAFT_PREFIX + d.slug); } catch (_) {}
+            });
+            draftWriteIndex([]);
+            closeLoadMenu();
+        }
+    });
+
+    setTimeout(function() {
+        document.addEventListener('click',   onLoadMenuDocClick, true);
+        document.addEventListener('keydown', onLoadMenuKey);
+    }, 0);
+}
 
 // ─── File drag-drop overlay ───────────────────────────────────────────────────
 
-(function initFileDropOverlay() {
+function initFileDropOverlay() {
     let dragCounter = 0;
-    const overlay = document.getElementById('drop-overlay');
+    const overlay = els.dropOverlay;
 
     window.addEventListener('dragenter', function(e) {
         if (e.dataTransfer && e.dataTransfer.types && Array.prototype.indexOf.call(e.dataTransfer.types, 'Files') !== -1) {
@@ -673,20 +917,21 @@ document.getElementById('import-file').addEventListener('change', function() {
         reader.onload = function(ev) { try { applySaveData(JSON.parse(ev.target.result)); } catch(err) { alert('Could not read save file.'); } };
         reader.readAsText(file);
     });
-})();
+}
 
 // ─── Generate button ──────────────────────────────────────────────────────────
 
-document.getElementById('btn-generate').addEventListener('click', function() {
-    if (!state.templateId) { alert('Please choose a template first.'); return; }
-    syncBlocksFromDOM();
-    syncContributorsFromDOM();
-    document.getElementById('out-html').value = buildFullHTML();
-    document.getElementById('out-json').value = buildJSONEntry();
-    const sec = document.getElementById('output-section');
-    sec.classList.add('visible');
-    sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
-});
+function initGenerateButton() {
+    document.getElementById('btn-generate').addEventListener('click', function() {
+        if (!state.templateId) { alert('Please choose a template first.'); return; }
+        syncBlocksFromDOM();
+        syncContributorsFromDOM();
+        els.outHtml.value = buildFullHTML();
+        els.outJson.value = buildJSONEntry();
+        els.outputSection.classList.add('visible');
+        els.outputSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+}
 
 // ─── Preview ──────────────────────────────────────────────────────────────────
 
@@ -708,70 +953,87 @@ function buildPreviewHtml() {
 function openPreview() {
     const html = buildPreviewHtml();
     if (html === null) return;
-    document.getElementById('preview-iframe').srcdoc = html;
-    document.getElementById('preview-overlay').style.display = 'flex';
+    els.previewIframe.srcdoc = html;
+    els.previewOverlay.style.display = 'flex';
     document.body.classList.add('preview-open');
 }
 
 function closePreview() {
-    document.getElementById('preview-overlay').style.display = 'none';
+    els.previewOverlay.style.display = 'none';
     document.body.classList.remove('preview-open');
-    document.getElementById('preview-iframe').srcdoc = '';
+    els.previewIframe.srcdoc = '';
 }
 
 function isPreviewOpen() {
-    return document.getElementById('preview-overlay').style.display === 'flex';
+    return els.previewOverlay.style.display === 'flex';
 }
 
-document.getElementById('btn-preview').addEventListener('click', openPreview);
-document.getElementById('btn-preview-close').addEventListener('click', closePreview);
+function initPreviewEvents() {
+    document.getElementById('btn-preview').addEventListener('click', openPreview);
+    document.getElementById('btn-preview-close').addEventListener('click', closePreview);
 
-document.getElementById('btn-preview-refresh').addEventListener('click', function() {
-    const html = buildPreviewHtml();
-    if (html === null) return;
-    document.getElementById('preview-iframe').srcdoc = html;
-});
+    document.getElementById('btn-preview-refresh').addEventListener('click', function() {
+        const html = buildPreviewHtml();
+        if (html === null) return;
+        els.previewIframe.srcdoc = html;
+    });
 
-document.getElementById('btn-preview-newtab').addEventListener('click', function() {
-    const html = buildPreviewHtml();
-    if (html === null) return;
-    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-    const url  = URL.createObjectURL(blob);
-    window.open(url, '_blank');
-    setTimeout(function() { URL.revokeObjectURL(url); }, 60000);
-});
+    document.getElementById('btn-preview-newtab').addEventListener('click', function() {
+        const html = buildPreviewHtml();
+        if (html === null) return;
+        const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+        const url  = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+        setTimeout(function() { URL.revokeObjectURL(url); }, 60000);
+    });
 
-document.getElementById('preview-overlay').addEventListener('click', function(e) {
-    if (e.target === this) closePreview();
-});
+    els.previewOverlay.addEventListener('click', function(e) {
+        if (e.target === els.previewOverlay) closePreview();
+    });
 
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape' && isPreviewOpen()) closePreview();
-});
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && isPreviewOpen()) closePreview();
+    });
+}
 
 // ─── Output buttons ───────────────────────────────────────────────────────────
 
-document.getElementById('btn-copy-html').addEventListener('click', function() { copyToClipboard(document.getElementById('out-html').value, this); });
-document.getElementById('btn-copy-json').addEventListener('click', function() { copyToClipboard(document.getElementById('out-json').value, this); });
-document.getElementById('btn-download-html').addEventListener('click', function() {
-    downloadFallback(document.getElementById('out-html').value, getFilename(), 'text/html;charset=utf-8');
-});
+function initOutputButtons() {
+    document.getElementById('btn-copy-html').addEventListener('click', function() { copyToClipboard(els.outHtml.value, this); });
+    document.getElementById('btn-copy-json').addEventListener('click', function() { copyToClipboard(els.outJson.value, this); });
+    document.getElementById('btn-download-html').addEventListener('click', function() {
+        downloadFallback(els.outHtml.value, getFilename(), 'text/html;charset=utf-8');
+    });
+}
 
 // ─── Filename auto-fill from title ────────────────────────────────────────────
 
-document.getElementById('f-title').addEventListener('input', function() {
-    if (!filenameAutoFill) return;
-    document.getElementById('f-filename').value = slugify(this.value);
-});
-
-document.getElementById('f-filename').addEventListener('input', function() {
-    filenameAutoFill = false;
-});
+function initFilenameSync() {
+    els.fTitle.addEventListener('input', function() {
+        if (!filenameAutoFill) return;
+        els.fFilename.value = slugify(this.value);
+    });
+    els.fFilename.addEventListener('input', function() {
+        filenameAutoFill = false;
+    });
+}
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 
+initElementCache();
 initEvents();
 initContribEvents();
+initTemplateNavEvents();
+initSwitchTemplateModal();
+initClearPostEvents();
+initSaveLoadEvents();
+initFileDropOverlay();
+initGenerateButton();
+initPreviewEvents();
+initOutputButtons();
+initFilenameSync();
+initImagePickerButtons();
+initAutosave();
 loadTemplates();
 loadBaseTemplate();
 setDefaultDate();

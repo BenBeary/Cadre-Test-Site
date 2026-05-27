@@ -100,7 +100,10 @@ const BLOCK_TYPES = {
         renderBody: function(b) {
             return '<div class="field">'
                 + '<label>Image Path</label>'
-                + '<input type="text" data-field="url" value="' + escHtml(b.url) + '" placeholder="e.g. images/events/my-photo.jpg">'
+                + '<div class="img-input-row">'
+                +   '<input type="text" data-field="url" value="' + escHtml(b.url) + '" placeholder="e.g. images/events/my-photo.jpg">'
+                +   '<button type="button" class="btn-pick-image" data-pick-image-for="block-url" title="Pick an image from the server">📁</button>'
+                + '</div>'
                 + '<div class="field-hint">Path is relative to the site root. Leave blank to use the placeholder image.</div>'
                 + '</div>'
                 + '<div class="field-grid">'
@@ -158,6 +161,7 @@ const BLOCK_TYPES = {
                 slidesHtml += '<div class="slide-item" data-slide-idx="' + si + '">'
                     + '<div class="slide-num">' + (si + 1) + '</div>'
                     + '<input type="text" data-slide-url="' + si + '" value="' + escHtml(s.url) + '" placeholder="Image path…" style="flex:2">'
+                    + '<button type="button" class="btn-pick-image" data-pick-image-for="slide-url" title="Pick an image from the server">📁</button>'
                     + '<input type="text" data-slide-alt="' + si + '" value="' + escHtml(s.alt) + '" placeholder="Alt text" style="flex:1">'
                     + '<button class="btn-icon danger" data-remove-slide="' + si + '" title="Remove">✕</button>'
                     + '</div>';

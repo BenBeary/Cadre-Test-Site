@@ -11,11 +11,94 @@
    replaces the singleton updateBlogIndex with one that contains the running
    set of new entries. */
 
-const BLOG_DATA_PATH = 'json/blog-data.json';
+// BLOG_DATA_PATH, decodeBase64Utf8, findEntryByHref, fetchBlogDataJson,
+// bindClick — provided by tools/js/admin-utils.js (loaded earlier).
 
-function pbBindClick(id, fn) {
-    const el = document.getElementById(id);
-    if (el) el.addEventListener('click', fn);
+// ── Inline filename-collision warning ─────────────────────────────────
+// Lightweight cache of the server's blog-data.json, populated the first time
+// the user types in the filename input (and refreshed after every successful
+// commit). On every keystroke we check getFilename() against the cache and
+// flash an amber chip if it collides — so the user knows BEFORE clicking
+// Publish that they're about to overwrite something.
+
+let pbServerIndexCache = null;          // parsed blog-data.json from the server
+let pbServerIndexFetching = false;      // single-flight guard
+let pbCollisionChipEl = null;           // inserted next to #f-filename
+
+function pbEnsureCollisionChip() {
+    if (pbCollisionChipEl) return pbCollisionChipEl;
+    const fn = document.getElementById('f-filename');
+    const headerFilename = fn && fn.closest('.header-filename');
+    if (!headerFilename) return null;
+    const chip = document.createElement('span');
+    chip.id = 'publish-collision-chip';
+    chip.className = 'publish-collision-chip';
+    chip.style.display = 'none';
+    headerFilename.appendChild(chip);
+    pbCollisionChipEl = chip;
+    return chip;
+}
+
+async function pbEnsureServerIndexCache() {
+    if (pbServerIndexCache || pbServerIndexFetching) return pbServerIndexCache;
+    pbServerIndexFetching = true;
+    try {
+        // Always fetch the server's copy — never the staged in-flight one —
+        // because the chip's job is to warn about COMMITTED state.
+        const resp = await ghFetch('GET', '/contents/' + BLOG_DATA_PATH);
+        pbServerIndexCache = JSON.parse(decodeBase64Utf8(resp.content));
+    } catch (err) {
+        console.warn('Publish: collision-warning cache fetch failed', err);
+    } finally {
+        pbServerIndexFetching = false;
+    }
+    return pbServerIndexCache;
+}
+
+function pbUpdateCollisionChip() {
+    const chip = pbEnsureCollisionChip();
+    if (!chip) return;
+    if (!pbServerIndexCache) {
+        chip.style.display = 'none';
+        return;
+    }
+    if (typeof getFilename !== 'function') return;
+    const filename = getFilename();
+    const href = 'Announcements-Blogs/' + filename;
+    const found = findEntryByHref(pbServerIndexCache, href);
+    if (!found) {
+        chip.style.display = 'none';
+        return;
+    }
+    const label = found.array === 'events' ? 'Events' : 'Announcements';
+    chip.textContent = '⚠ overwrites existing post (' + label + ')';
+    chip.title = 'A post already lives at ' + href + ' (in ' + label + '). Publishing will overwrite its HTML and update its JSON entry.';
+    chip.style.display = '';
+}
+
+function pbInitCollisionWarning() {
+    const fn = document.getElementById('f-filename');
+    const title = document.getElementById('f-title');
+    if (!fn) return;
+
+    let debounceId = null;
+    function schedule() {
+        clearTimeout(debounceId);
+        debounceId = setTimeout(function() {
+            pbEnsureServerIndexCache().then(pbUpdateCollisionChip);
+        }, 250);
+    }
+    fn.addEventListener('input', schedule);
+    if (title) title.addEventListener('input', schedule);
+
+    // Refresh cache after every successful commit so the chip reflects the
+    // new server state.
+    if (typeof ChangeQueue !== 'undefined' && ChangeQueue.onCommitSuccess) {
+        ChangeQueue.onCommitSuccess(function() {
+            pbServerIndexCache = null;
+            pbEnsureServerIndexCache().then(pbUpdateCollisionChip);
+        });
+    }
 }
 
 function pbUpdateButtonState() {
@@ -52,9 +135,9 @@ function pbInit() {
     }
     pbUpdateButtonState();
 
-    pbBindClick('publish-modal-cancel',   pbCloseModal);
-    pbBindClick('publish-modal-announce', function() { pbDoPublish('announcements'); });
-    pbBindClick('publish-modal-event',    function() { pbDoPublish('events'); });
+    bindClick('publish-modal-cancel',   pbCloseModal);
+    bindClick('publish-modal-announce', function() { pbDoPublish('announcements'); });
+    bindClick('publish-modal-event',    function() { pbDoPublish('events'); });
 
     const overlay = document.getElementById('publish-modal-overlay');
     if (overlay) overlay.addEventListener('click', function(e) {
@@ -64,6 +147,64 @@ function pbInit() {
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') pbCloseModal();
     });
+
+    pbInitCollisionWarning();
+}
+
+// Lint the in-progress post and return a list of human-readable issues.
+// Doesn't block publish — defaults exist for every field — but surfaces gaps
+// the user can fix BEFORE committing.
+function pbCollectValidationIssues() {
+    const issues = [];
+    if (typeof state === 'undefined') return issues;
+
+    const get = function(id) { const el = document.getElementById(id); return el ? (el.value || '').trim() : ''; };
+
+    if (!get('f-title'))     issues.push('Title is empty.');
+    if (!get('f-author'))    issues.push('Author is empty.');
+    if (!get('f-date'))      issues.push('Date is empty.');
+    if (!get('f-thumbnail')) issues.push('Thumbnail image is empty — the listing card will show a placeholder.');
+
+    if (state.settings && state.settings.isEvent && !get('f-end-date')) {
+        issues.push('End-date is empty for an event template.');
+    }
+
+    const blocks = state.blocks || [];
+    const missingImages = blocks.filter(function(b) {
+        return b.type === 'image' && !(b.url && b.url.trim());
+    }).length;
+    if (missingImages) {
+        issues.push(missingImages + ' image block' + (missingImages === 1 ? '' : 's') + ' missing an image path.');
+    }
+    const missingSlides = blocks.reduce(function(n, b) {
+        if (b.type !== 'slideshow') return n;
+        return n + (b.slides || []).filter(function(s) { return !(s.url && s.url.trim()); }).length;
+    }, 0);
+    if (missingSlides) {
+        issues.push(missingSlides + ' slideshow slide' + (missingSlides === 1 ? '' : 's') + ' missing an image path.');
+    }
+
+    if (state.showContributors) {
+        const namelessContribs = (state.contributors || []).filter(function(c) {
+            return !(c.name && c.name.trim());
+        }).length;
+        if (namelessContribs) {
+            issues.push(namelessContribs + ' contributor' + (namelessContribs === 1 ? '' : 's') + ' missing a name.');
+        }
+    }
+
+    return issues;
+}
+
+function pbRenderValidationBlock(issues) {
+    const slot = document.getElementById('publish-modal-validation');
+    if (!slot) return;
+    if (!issues.length) { slot.style.display = 'none'; slot.innerHTML = ''; return; }
+    slot.style.display = '';
+    slot.innerHTML = '<p class="publish-modal-validation-title">Before you publish:</p><ul>'
+        + issues.map(function(i) { return '<li>' + escHtml(i) + '</li>'; }).join('')
+        + '</ul>'
+        + '<p class="publish-modal-validation-help">You can still publish — these are warnings, not errors.</p>';
 }
 
 function pbOpenModal() {
@@ -90,6 +231,18 @@ function pbOpenModal() {
     }
     const fnEl = document.getElementById('publish-modal-filename');
     if (fnEl) fnEl.textContent = filename;
+
+    pbRenderValidationBlock(pbCollectValidationIssues());
+
+    // Default the primary button to Event when an end-date is filled —
+    // matches Phase 3.5 (auto-detect event vs announcement).
+    const eventBtn = document.getElementById('publish-modal-event');
+    const announceBtn = document.getElementById('publish-modal-announce');
+    const isEventish = !!(document.getElementById('f-end-date') && document.getElementById('f-end-date').value);
+    if (eventBtn && announceBtn) {
+        eventBtn.classList.toggle('publish-modal-default', isEventish);
+        announceBtn.classList.toggle('publish-modal-default', !isEventish);
+    }
 
     const overlay = document.getElementById('publish-modal-overlay');
     if (overlay) overlay.style.display = 'flex';
@@ -124,14 +277,8 @@ async function pbDoPublish(target /* 'announcements' | 'events' */) {
 
     // Fetch (or reuse pending) blog-data.json content
     let currentJson;
-    const pending = ChangeQueue.list().find(function(a) { return a.type === 'updateBlogIndex'; });
     try {
-        if (pending) {
-            currentJson = JSON.parse(pending.content);
-        } else {
-            const resp = await ghFetch('GET', '/contents/' + BLOG_DATA_PATH);
-            currentJson = JSON.parse(pbDecodeBase64Utf8(resp.content));
-        }
+        currentJson = await fetchBlogDataJson();
     } catch (err) {
         alert('Failed to load ' + BLOG_DATA_PATH + ' from GitHub:\n' + (err.message || err));
         return;
@@ -139,7 +286,7 @@ async function pbDoPublish(target /* 'announcements' | 'events' */) {
 
     // Collision check — does an entry already exist at this href (either on
     // the server or staged from an earlier publish this session)?
-    const existing = pbFindEntryByHref(currentJson, htmlPath);
+    const existing = findEntryByHref(currentJson, htmlPath);
     let originalEntry  = null;
     let originalTarget = null;
 
@@ -185,49 +332,17 @@ async function pbDoPublish(target /* 'announcements' | 'events' */) {
         }
     );
 
-    // Recompute the bundled JSON update — counts reflect TRUE additions only
-    // (overwrites don't count, since net entries didn't change for them).
-    const stats = pbCountPublishStats();
     ChangeQueue.replaceOrAdd(
         function(a) { return a.type === 'updateBlogIndex'; },
         {
-            type:               'updateBlogIndex',
-            path:               BLOG_DATA_PATH,
-            content:            newJsonContent,
-            addedAnnouncements: stats.announcements,
-            addedEvents:        stats.events,
-            addedFor:           target,
-            addedCount:         stats.announcements + stats.events
+            type:    'updateBlogIndex',
+            path:    BLOG_DATA_PATH,
+            content: newJsonContent
         }
     );
 
     // Open Show Changes so the user can see what just got staged
     if (typeof AdminToolManager !== 'undefined') AdminToolManager.open('show-changes');
-}
-
-function pbFindEntryByHref(json, href) {
-    const arrays = ['announcements', 'events'];
-    for (let a = 0; a < arrays.length; a++) {
-        const arr = json[arrays[a]];
-        if (!Array.isArray(arr)) continue;
-        for (let i = 0; i < arr.length; i++) {
-            if (arr[i] && arr[i].href === href) {
-                return { array: arrays[a], index: i, entry: arr[i] };
-            }
-        }
-    }
-    return null;
-}
-
-function pbCountPublishStats() {
-    let a = 0, e = 0;
-    ChangeQueue.list().forEach(function(act) {
-        if (act.type !== 'publishHtml') return;
-        if (act.originalEntry) return;  // overwrites don't change the net count
-        if (act.target === 'announcements') a++;
-        else if (act.target === 'events')   e++;
-    });
-    return { announcements: a, events: e };
 }
 
 function pbConfirmOverwrite(existing, newTarget, htmlPath) {
@@ -261,14 +376,6 @@ function pbConfirmOverwrite(existing, newTarget, htmlPath) {
         document.addEventListener('keydown', onKey);
         overlay.style.display = 'flex';
     });
-}
-
-// Decode GitHub's base64 (with line breaks) as UTF-8 text.
-function pbDecodeBase64Utf8(b64WithBreaks) {
-    const binary = atob(b64WithBreaks.replace(/\s/g, ''));
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-    return new TextDecoder('utf-8').decode(bytes);
 }
 
 if (document.readyState === 'loading') {

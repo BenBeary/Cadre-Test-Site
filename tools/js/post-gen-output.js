@@ -4,10 +4,17 @@
 // Function references resolve at call time, so script load order
 // (data → output → main) is sufficient.
 
-function spaces(n) { return new Array(n + 1).join(' '); }
+const BLOG_BODY_INDENT              = 20; // <div class="blog-body"> inner indent (no sidebar)
+const BLOG_BODY_INDENT_WITH_SIDEBAR = 24; // <div class="blog-body"> inner indent (with sidebar)
+const TWO_COL_ROW_INDENT_DELTA      = 4;  // each nested level in blog-two-col adds this
+
+const SPACES_CACHE = {};
+function spaces(n) {
+    return SPACES_CACHE[n] || (SPACES_CACHE[n] = ' '.repeat(n));
+}
 
 function blockToBodyHtml(b, indent) {
-    const px = indent || spaces(20);
+    const px = indent || spaces(BLOG_BODY_INDENT);
     const type = BLOCK_TYPES[b.type];
     return type ? type.toBodyHtml(b, px) : '';
 }
@@ -15,9 +22,9 @@ function blockToBodyHtml(b, indent) {
 function buildTwoColAt(items, baseSpaces) {
     const colA = items.filter(function(b) { return b.col === 'A'; });
     const colB = items.filter(function(b) { return b.col === 'B'; });
-    const rowSp = baseSpaces + 4;
-    const cellSp = rowSp + 4;
-    const blockSp = cellSp + 4;
+    const rowSp   = baseSpaces + TWO_COL_ROW_INDENT_DELTA;
+    const cellSp  = rowSp + TWO_COL_ROW_INDENT_DELTA;
+    const blockSp = cellSp + TWO_COL_ROW_INDENT_DELTA;
     const count = Math.max(colA.length, colB.length);
     const rows = [];
     for (var i = 0; i < count; i++) {
@@ -54,12 +61,12 @@ function buildBodyInner(blocks, blockSpaces) {
 
 function buildContentStr(blocks, hasSidebar) {
     if (hasSidebar) {
-        const inner = buildBodyInner(blocks, 24);
+        const inner = buildBodyInner(blocks, BLOG_BODY_INDENT_WITH_SIDEBAR);
         return '\n\n' + spaces(16) + '<div class="blog-layout">\n'
             + spaces(20) + '<div class="blog-body">\n' + inner + '\n' + spaces(20) + '</div>\n\n'
             + buildContributorSidebar() + '\n' + spaces(16) + '</div>';
     }
-    const inner = buildBodyInner(blocks, 20);
+    const inner = buildBodyInner(blocks, BLOG_BODY_INDENT);
     return '\n\n' + spaces(16) + '<div class="blog-body">\n' + inner + '\n' + spaces(16) + '</div>';
 }
 
@@ -82,7 +89,7 @@ function buildContributorSidebar() {
             + '                        </div>';
     }).join('\n\n');
     return '                <aside class="blog-sidebar">\n'
-        + '                    <h2 class="blog-sidebar-title">Contributers:</h2>\n'
+        + '                    <h2 class="blog-sidebar-title">Contributors:</h2>\n'
         + '                    <div class="contributor-list">\n' + cards + '\n                    </div>\n'
         + '                </aside>';
 }

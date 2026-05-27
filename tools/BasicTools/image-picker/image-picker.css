@@ -1,36 +1,40 @@
 /* Image Picker panel — read-only browser for the basic page.
-   Mirrors the sticky-right-column structure of the admin's image-manager
-   panel but without any admin chrome (no toolbar buttons beyond Reload/Close).
+   Sits INLINE inside .content-contrib-row alongside the content-blocks step
+   and the contributors sidebar (same pattern as .contrib-sidebar). Styled as
+   a block to match the surrounding .step cards.
    Reuses design tokens from ../../css/postGen-style.css. */
 
 .image-picker-panel {
-    width: 360px;
-    flex-shrink: 0;
+    /* Absolutely positioned LEFT of step-content so opening / closing the
+       panel never shifts the main content block. */
+    position: absolute;
+    top: 0;
+    right: calc(100% + 20px);
+    width: 320px;
+    max-height: calc(100vh - var(--header-h) - 24px);
     background: var(--surface);
-    border-left: 1px solid var(--border);
-    display: flex;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
     flex-direction: column;
-    position: sticky;
-    top: var(--header-h);
-    height: calc(100vh - var(--header-h));
     overflow: hidden;
 }
 
 .image-picker-header {
     display: flex;
     align-items: center;
-    gap: 4px;
-    padding: 10px;
+    gap: 6px;
+    padding: 14px 16px;
     border-bottom: 1px solid var(--border);
     flex-shrink: 0;
+    background: var(--surface2);
+    border-top-left-radius: var(--radius);
+    border-top-right-radius: var(--radius);
 }
 
 .image-picker-title {
-    font-size: 13px;
-    font-weight: 700;
+    font-size: 14px;
+    font-weight: 600;
     color: var(--text);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
     flex: 1;
     overflow: hidden;
 }
@@ -92,7 +96,22 @@
 .img-picker-folder:hover,
 .img-picker-image:hover  { background: var(--surface2); }
 
-.img-picker-icon { font-size: 14px; flex-shrink: 0; }
+.img-picker-icon {
+    font-size: 14px;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+}
+.img-picker-thumb {
+    width: 24px;
+    height: 24px;
+    object-fit: cover;
+    border-radius: 3px;
+    background: var(--surface2);
+}
 
 .img-picker-name {
     flex: 1;
@@ -147,6 +166,6 @@
 /* 720p height compensation (matches body { zoom: 0.8 } in postGen-style.css) */
 @media (max-height: 800px) {
     .image-picker-panel {
-        height: calc(100vh / 0.8 - var(--header-h));
+        max-height: calc(100vh / 0.8 - var(--header-h) - 24px);
     }
 }

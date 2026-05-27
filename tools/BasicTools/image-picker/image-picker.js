@@ -87,10 +87,14 @@ function ipRenderTree() {
 function ipRenderNode(node, depth) {
     const padLeft = 8 + depth * 16;
     if (node.type === 'image') {
+        // Pages live at /tools/, files are at /images/… — so ../<path> works
+        // from this page. Lazy-loaded so big trees don't all fetch up front.
+        const thumb = '<img class="img-picker-thumb" src="../' + escHtml(node.path)
+                    + '" alt="" loading="lazy">';
         return '<div class="img-picker-item img-picker-image" data-path="' + escHtml(node.path)
              + '" title="' + escHtml(node.path)
              + '" draggable="true" style="padding-left: ' + padLeft + 'px">'
-             + '<span class="img-picker-icon">🖼</span>'
+             + '<span class="img-picker-icon">' + thumb + '</span>'
              + '<span class="img-picker-name">' + escHtml(node.name) + '</span>'
              + '</div>';
     }
@@ -168,14 +172,30 @@ function ipHideContextMenu() {
     if (ipCtxMenuEl) { ipCtxMenuEl.remove(); ipCtxMenuEl = null; }
 }
 
-function ipTogglePanel() {
+// "Pick mode": when set, a single click on an image row delivers the path
+// to ipPickCallback and ends pick mode. Used by the 📁 picker buttons next
+// to image-path inputs in the post generator.
+let ipPickCallback = null;
+
+function ipSetPickMode(on) {
+    const panel = document.getElementById('image-picker-panel');
+    if (panel) panel.classList.toggle('image-picker-pick-mode', !!on);
+    if (!on) ipPickCallback = null;
+}
+
+function ipOpenPanel() {
     const panel = document.getElementById('image-picker-panel');
     if (!panel) return;
-    ipPanelOpen = !ipPanelOpen;
-    panel.style.display = ipPanelOpen ? 'flex' : 'none';
+    ipPanelOpen = true;
+    panel.style.display = 'flex';
     const btn = document.getElementById('btn-open-image-picker');
-    if (btn) btn.classList.toggle('image-picker-btn-active', ipPanelOpen);
-    if (ipPanelOpen && !ipLoaded) ipLoadAndRender();
+    if (btn) btn.classList.add('image-picker-btn-active');
+    if (!ipLoaded) ipLoadAndRender();
+}
+
+function ipTogglePanel() {
+    if (ipPanelOpen) ipClosePanel();
+    else             ipOpenPanel();
 }
 
 function ipClosePanel() {
@@ -185,6 +205,11 @@ function ipClosePanel() {
     panel.style.display = 'none';
     const btn = document.getElementById('btn-open-image-picker');
     if (btn) btn.classList.remove('image-picker-btn-active');
+    // If pick mode was active, let the caller know it was cancelled so they
+    // can clear toggle-state on the originating 📁 button.
+    const cb = ipPickCallback;
+    ipSetPickMode(false);
+    if (cb) cb(null);
 }
 
 function ipInit() {
@@ -206,6 +231,15 @@ function ipInit() {
     const body = document.getElementById('image-picker-body');
     if (body) {
         body.addEventListener('click', function(e) {
+            const imageRow = e.target.closest('.img-picker-image');
+            if (imageRow && ipPickCallback) {
+                const cb = ipPickCallback;
+                ipPickCallback = null;     // prevent ipClosePanel from firing cb(null)
+                const path = imageRow.dataset.path;
+                ipClosePanel();
+                cb(path || null);          // always notify so the originating button clears
+                return;
+            }
             const folderRow = e.target.closest('.img-picker-folder');
             if (folderRow) ipToggleFolder(folderRow.dataset.path);
         });
@@ -230,3 +264,15 @@ if (document.readyState === 'loading') {
 } else {
     ipInit();
 }
+
+// Public API consumed by the 📁 picker buttons in post-gen.js.
+window.ImagePicker = {
+    openInPickMode: function(callback) {
+        if (typeof callback !== 'function') return;
+        ipPickCallback = callback;
+        ipSetPickMode(true);
+        ipOpenPanel();
+    },
+    isOpen: function() { return ipPanelOpen; },
+    close:  function() { ipClosePanel(); }
+};

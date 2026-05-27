@@ -14,6 +14,7 @@
     <link rel="stylesheet" href="AdminTools/show-changes/show-changes.css">
     <link rel="stylesheet" href="AdminTools/publish-blog/publish-blog.css">
     <link rel="stylesheet" href="AdminTools/blog-list/blog-list.css">
+    <link rel="stylesheet" href="AdminTools/blog-index-check/blog-index-check.css">
 </head>
 <body data-page-role="admin">
 
@@ -52,7 +53,8 @@
             <div class="step-header">
                 <div class="step-number">1</div>
                 <div class="step-title">Post Details</div>
-                <button class="btn-panel-toggle btn-panel-toggle-danger" id="btn-clear-post-step" title="Wipe the current post and start fresh">🗑 Clear Post</button>
+                <button class="btn-panel-toggle" id="btn-open-image-manager" title="Open the Image Manager panel to browse, upload, or stage image changes">📁 Browse Images</button>
+                <button class="btn-panel-toggle btn-panel-toggle-danger" id="btn-clear-post-step" style="margin-left: 0" title="Wipe the current post and start fresh">🗑 Clear Post</button>
             </div>
             <div class="field-grid">
                 <div class="field full">
@@ -73,13 +75,16 @@
                 </div>
                 <div class="field full">
                     <label for="f-thumbnail">Thumbnail Image Path</label>
-                    <input type="text" id="f-thumbnail" placeholder="e.g. images/events/my-event-thumb.png">
+                    <div class="img-input-row">
+                        <input type="text" id="f-thumbnail" placeholder="e.g. images/events/my-event-thumb.png">
+                        <button type="button" class="btn-pick-image" data-pick-image-for="thumbnail" title="Pick an image from the server">📁</button>
+                    </div>
                     <div class="field-hint">Used for the card on the blog listing page. Path is relative to the site root.</div>
                 </div>
             </div>
         </div>
 
-        <!-- Step 2: Content builder + Contributors (side by side) -->
+        <!-- Step 2: Content builder + Contributors + Image Manager (side by side) -->
         <div class="content-contrib-row" id="content-contrib-row">
             <div class="step" id="step-content">
                 <div class="step-header">
@@ -92,6 +97,21 @@
                 </div>
             </div>
             <aside class="contrib-sidebar" id="contrib-sidebar" style="display:none"></aside>
+
+            <!-- Image Manager — registered with AdminToolManager. Sits as an
+                 inline block next to the content builder (like .contrib-sidebar)
+                 so the user can pick / upload images without leaving the
+                 main work area. -->
+            <aside class="image-manager-panel" id="image-manager-panel" style="display:none">
+                <div class="image-manager-header">
+                    <div class="image-manager-title">Images</div>
+                    <button class="image-manager-tool-btn" id="image-manager-reload" title="Reload tree from GitHub">↻</button>
+                    <button class="image-manager-close" id="image-manager-close" title="Close">✕</button>
+                </div>
+                <div class="image-manager-body" id="image-manager-body">
+                    <div class="image-manager-placeholder">Loading…</div>
+                </div>
+            </aside>
         </div>
 
         <!-- Generate button -->
@@ -123,33 +143,9 @@
                 </div>
                 <textarea class="output-textarea" id="out-json" readonly rows="8"></textarea>
             </div>
-
-            <div class="instructions-box">
-                <h3>Next Steps</h3>
-                <ol>
-                    <li>Click <strong>Download</strong> above and save the file to the <code>Announcements-Blogs/</code> folder in the project.</li>
-                    <li>Upload any images you referenced to the <code>images/</code> folder.</li>
-                    <li>Copy the <strong>blog-data.json entry</strong> above and paste it into <code>json/blog-data.json</code> — add it inside the <code>"announcements"</code> (or <code>"events"</code>) array.</li>
-                    <li>Commit and push your changes to GitHub. The site will update automatically.</li>
-                </ol>
-            </div>
         </div>
 
     </div><!-- end main-area -->
-
-    <!-- Image Manager panel — registered with AdminToolManager from
-         AdminTools/image-manager/image-manager.js. Save/Undo/Reset moved to
-         the Show Changes panel since they operate on the shared ChangeQueue. -->
-    <aside class="image-manager-panel" id="image-manager-panel" style="display:none">
-        <div class="image-manager-header">
-            <div class="image-manager-title">Images</div>
-            <button class="image-manager-tool-btn" id="image-manager-reload" title="Reload tree from GitHub">↻</button>
-            <button class="image-manager-close" id="image-manager-close" title="Close">✕</button>
-        </div>
-        <div class="image-manager-body" id="image-manager-body">
-            <div class="image-manager-placeholder">Loading…</div>
-        </div>
-    </aside>
 
     <!-- Show Changes panel — admin tool that displays ChangeQueue contents.
          Registered with AdminToolManager from AdminTools/show-changes/show-changes.js. -->
@@ -183,6 +179,19 @@
         </div>
     </aside>
 
+    <!-- Blog Index Check panel — cross-references blog-data.json against
+         Announcements-Blogs/. Registered from AdminTools/blog-index-check/. -->
+    <aside class="blog-index-check-panel" id="blog-index-check-panel" style="display:none">
+        <div class="blog-index-check-header">
+            <div class="blog-index-check-title">Blog Index Check</div>
+            <button class="image-manager-tool-btn" id="blog-index-check-reload" title="Run check">↻</button>
+            <button class="image-manager-close"    id="blog-index-check-close"  title="Close">✕</button>
+        </div>
+        <div class="blog-index-check-body" id="blog-index-check-body">
+            <div class="blog-index-check-placeholder">Click ↻ to run the check.</div>
+        </div>
+    </aside>
+
     <!-- Right-side admin tools sidebar (admin page only). Tools register with
          AdminToolManager at DOMContentLoaded; the manager renders the buttons. -->
     <aside class="admin-tools-sidebar" id="admin-tools-sidebar">
@@ -198,67 +207,9 @@
 
 </div><!-- end app-layout -->
 
-<!-- Full-screen drag-drop overlay -->
-<div class="drop-overlay" id="drop-overlay">
-    <div class="drop-overlay-inner">
-        <div class="drop-overlay-icon">📂</div>
-        <div>Drop your save file here</div>
-    </div>
-</div>
-
-<!-- Preview overlay -->
-<div class="preview-overlay" id="preview-overlay" style="display:none">
-    <div class="preview-frame-wrap">
-        <div class="preview-toolbar">
-            <span class="preview-title">Live Preview</span>
-            <button class="btn-preview-action" id="btn-preview-refresh" title="Re-render with the latest editor changes">↻ Refresh</button>
-            <button class="btn-preview-action" id="btn-preview-newtab" title="Open in a new browser tab">↗ New Tab</button>
-            <button class="btn-preview-close" id="btn-preview-close" title="Close (Esc)">✕</button>
-        </div>
-        <iframe id="preview-iframe" title="Post preview"></iframe>
-    </div>
-</div>
-
-<!-- Switch template confirmation modal -->
-<div class="modal-overlay" id="modal-overlay" style="display:none">
-    <div class="modal-box">
-        <div class="modal-title">Switch Templates?</div>
-        <div class="modal-body">You have content blocks in the editor. Switching templates will replace them with the new template's starting blocks — your current work will be lost.</div>
-        <div class="modal-actions">
-            <button class="btn-modal-cancel" id="modal-cancel">Keep Editing</button>
-            <button class="btn-modal-confirm" id="modal-confirm">Switch Template</button>
-        </div>
-    </div>
-</div>
-
-<!-- Sign-in modal -->
-<div class="modal-overlay" id="auth-modal-overlay" style="display:none">
-    <div class="modal-box">
-        <div class="modal-title">Sign in with GitHub</div>
-        <div class="modal-body">
-            <p>Paste a fine-grained Personal Access Token scoped to this repo. The token is stored only in this browser's localStorage and is used to authenticate future upload features.</p>
-            <p><a id="auth-generate-link" href="#" target="_blank" rel="noopener">Generate a token →</a></p>
-            <input type="password" id="auth-pat-input" placeholder="github_pat_…" autocomplete="off" spellcheck="false">
-            <div class="auth-error" id="auth-error" style="display:none"></div>
-        </div>
-        <div class="modal-actions">
-            <button class="btn-modal-cancel" id="auth-modal-cancel">Cancel</button>
-            <button class="btn-modal-confirm" id="auth-modal-confirm">Sign in</button>
-        </div>
-    </div>
-</div>
-
-<!-- Clear post confirmation modal -->
-<div class="modal-overlay" id="clear-modal-overlay" style="display:none">
-    <div class="modal-box">
-        <div class="modal-title">Clear Post?</div>
-        <div class="modal-body">This wipes the title, author, date, thumbnail, content blocks, contributors, and the generated output. This cannot be undone.</div>
-        <div class="modal-actions">
-            <button class="btn-modal-cancel" id="clear-modal-cancel">Keep Editing</button>
-            <button class="btn-modal-confirm" id="clear-modal-confirm">Clear Post</button>
-        </div>
-    </div>
-</div>
+<!-- Shared modals (drop overlay, preview overlay, switch-template, sign-in,
+     clear post) are injected by tools/js/post-gen-modals.js into this slot. -->
+<div id="post-gen-shared-modals-slot"></div>
 
 <!-- Image Manager: delete confirmation -->
 <div class="modal-overlay" id="img-delete-modal-overlay" style="display:none">
@@ -326,6 +277,7 @@
     <div class="modal-box">
         <div class="modal-title">Publish Blog</div>
         <div class="modal-body">
+            <div id="publish-modal-validation" class="publish-modal-validation" style="display:none"></div>
             <p>Where should this blog be added?</p>
             <p>Files about to be staged:</p>
             <ul>
@@ -361,18 +313,18 @@
 </div>
 
 <!-- Image Manager: conflict modal (shown when a save fails partway) -->
-<div class="modal-overlay" id="img-conflict-modal-overlay" style="display:none">
+<div class="modal-overlay" id="commit-conflict-modal-overlay" style="display:none">
     <div class="modal-box">
         <div class="modal-title">Conflict detected</div>
         <div class="modal-body">
-            <p>Couldn't apply <code id="img-conflict-action"></code> on <code id="img-conflict-path"></code>:</p>
-            <pre id="img-conflict-message" class="img-conflict-message"></pre>
+            <p>Couldn't apply <code id="commit-conflict-action"></code> on <code id="commit-conflict-path"></code>:</p>
+            <pre id="commit-conflict-message" class="commit-conflict-message"></pre>
             <p>The file likely changed on GitHub since the tree was loaded.</p>
-            <p id="img-conflict-progress"></p>
+            <p id="commit-conflict-progress"></p>
         </div>
         <div class="modal-actions">
-            <button class="btn-modal-cancel" id="img-conflict-keep">Keep queue</button>
-            <button class="btn-modal-confirm" id="img-conflict-reset">↻ Reset</button>
+            <button class="btn-modal-cancel" id="commit-conflict-keep">Keep queue</button>
+            <button class="btn-modal-confirm" id="commit-conflict-reset">↻ Reset</button>
         </div>
     </div>
 </div>
@@ -420,8 +372,13 @@
     </div>
 </div>
 
+<!-- post-gen-modals.js MUST load before auth.js — auth.js queries auth-modal-*
+     element IDs at top-level execution time, and they only exist after the
+     modal slot has been replaced. -->
+<script src="js/post-gen-modals.js"></script>
 <script src="AuthManager/auth.js"></script>
 <script src="AuthManager/github-api.js"></script>
+<script src="js/admin-utils.js"></script>
 <script src="AdminTools/admin-tool-manager.js"></script>
 <script src="AdminTools/change-queue.js"></script>
 <script src="js/post-gen-data.js"></script>
@@ -432,5 +389,6 @@
 <script src="AdminTools/image-manager/image-manager.js"></script>
 <script src="AdminTools/publish-blog/publish-blog.js"></script>
 <script src="AdminTools/blog-list/blog-list.js"></script>
+<script src="AdminTools/blog-index-check/blog-index-check.js"></script>
 </body>
 </html>

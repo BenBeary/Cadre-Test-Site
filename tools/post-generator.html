@@ -70,13 +70,16 @@
                 </div>
                 <div class="field full">
                     <label for="f-thumbnail">Thumbnail Image Path</label>
-                    <input type="text" id="f-thumbnail" placeholder="e.g. images/events/my-event-thumb.png">
+                    <div class="img-input-row">
+                        <input type="text" id="f-thumbnail" placeholder="e.g. images/events/my-event-thumb.png">
+                        <button type="button" class="btn-pick-image" data-pick-image-for="thumbnail" title="Pick an image from the server">📁</button>
+                    </div>
                     <div class="field-hint">Used for the card on the blog listing page. Path is relative to the site root.</div>
                 </div>
             </div>
         </div>
 
-        <!-- Step 2: Content builder + Contributors (side by side) -->
+        <!-- Step 2: Content builder + Contributors + Image Picker (side by side) -->
         <div class="content-contrib-row" id="content-contrib-row">
             <div class="step" id="step-content">
                 <div class="step-header">
@@ -89,6 +92,21 @@
                 </div>
             </div>
             <aside class="contrib-sidebar" id="contrib-sidebar" style="display:none"></aside>
+
+            <!-- Image Picker panel — read-only image browser. Sits as an inline
+                 block alongside the content builder; toggled by the Step 1
+                 "📁 Browse Images" header button and by every 📁 picker button
+                 next to an image-path input. -->
+            <aside class="image-picker-panel" id="image-picker-panel" style="display:none">
+                <div class="image-picker-header">
+                    <div class="image-picker-title">Images</div>
+                    <button class="image-picker-tool-btn" id="image-picker-reload" title="Reload from GitHub">↻</button>
+                    <button class="image-picker-close"    id="image-picker-close"  title="Close">✕</button>
+                </div>
+                <div class="image-picker-body" id="image-picker-body">
+                    <div class="image-picker-placeholder">Loading…</div>
+                </div>
+            </aside>
         </div>
 
         <!-- Generate button -->
@@ -134,57 +152,14 @@
 
     </div><!-- end main-area -->
 
-    <!-- Image Picker panel — read-only browser. Toggled by the
-         "📁 Browse Images" header button. -->
-    <aside class="image-picker-panel" id="image-picker-panel" style="display:none">
-        <div class="image-picker-header">
-            <div class="image-picker-title">Images</div>
-            <button class="image-picker-tool-btn" id="image-picker-reload" title="Reload from GitHub">↻</button>
-            <button class="image-picker-close"    id="image-picker-close"  title="Close">✕</button>
-        </div>
-        <div class="image-picker-body" id="image-picker-body">
-            <div class="image-picker-placeholder">Loading…</div>
-        </div>
-    </aside>
-
 </div><!-- end app-layout -->
 
-<!-- Full-screen drag-drop overlay -->
-<div class="drop-overlay" id="drop-overlay">
-    <div class="drop-overlay-inner">
-        <div class="drop-overlay-icon">📂</div>
-        <div>Drop your save file here</div>
-    </div>
-</div>
+<!-- Shared modals (drop overlay, preview overlay, switch-template, sign-in,
+     clear post) are injected by tools/js/post-gen-modals.js into this slot. -->
+<div id="post-gen-shared-modals-slot"></div>
 
-<!-- Preview overlay -->
-<div class="preview-overlay" id="preview-overlay" style="display:none">
-    <div class="preview-frame-wrap">
-        <div class="preview-toolbar">
-            <span class="preview-title">Live Preview</span>
-            <button class="btn-preview-action" id="btn-preview-refresh" title="Re-render with the latest editor changes">↻ Refresh</button>
-            <button class="btn-preview-action" id="btn-preview-newtab" title="Open in a new browser tab">↗ New Tab</button>
-            <button class="btn-preview-close" id="btn-preview-close" title="Close (Esc)">✕</button>
-        </div>
-        <iframe id="preview-iframe" title="Post preview"></iframe>
-    </div>
-</div>
-
-<!-- Switch template confirmation modal -->
-<div class="modal-overlay" id="modal-overlay" style="display:none">
-    <div class="modal-box">
-        <div class="modal-title">Switch Templates?</div>
-        <div class="modal-body">You have content blocks in the editor. Switching templates will replace them with the new template's starting blocks — your current work will be lost.</div>
-        <div class="modal-actions">
-            <button class="btn-modal-cancel" id="modal-cancel">Keep Editing</button>
-            <button class="btn-modal-confirm" id="modal-confirm">Switch Template</button>
-        </div>
-    </div>
-</div>
-
-<!-- Restricted-access modal: shown when an unauthenticated user was just
-     kicked back from the admin page. Close keeps them on basic; Login opens
-     the sign-in modal so they can promote themselves. -->
+<!-- Restricted-access modal: basic-page-only. Shown when an unauthenticated
+     user was just kicked back from the admin page. -->
 <div class="modal-overlay" id="restricted-modal-overlay" style="display:none">
     <div class="modal-box">
         <div class="modal-title">Restricted Access</div>
@@ -198,35 +173,10 @@
     </div>
 </div>
 
-<!-- Sign-in modal -->
-<div class="modal-overlay" id="auth-modal-overlay" style="display:none">
-    <div class="modal-box">
-        <div class="modal-title">Sign in with GitHub</div>
-        <div class="modal-body">
-            <p>Paste a fine-grained Personal Access Token scoped to this repo. Signing in unlocks the admin tool.</p>
-            <p><a id="auth-generate-link" href="#" target="_blank" rel="noopener">Generate a token →</a></p>
-            <input type="password" id="auth-pat-input" placeholder="github_pat_…" autocomplete="off" spellcheck="false">
-            <div class="auth-error" id="auth-error" style="display:none"></div>
-        </div>
-        <div class="modal-actions">
-            <button class="btn-modal-cancel" id="auth-modal-cancel">Cancel</button>
-            <button class="btn-modal-confirm" id="auth-modal-confirm">Sign in</button>
-        </div>
-    </div>
-</div>
-
-<!-- Clear post confirmation modal -->
-<div class="modal-overlay" id="clear-modal-overlay" style="display:none">
-    <div class="modal-box">
-        <div class="modal-title">Clear Post?</div>
-        <div class="modal-body">This wipes the title, author, date, thumbnail, content blocks, contributors, and the generated output. This cannot be undone.</div>
-        <div class="modal-actions">
-            <button class="btn-modal-cancel" id="clear-modal-cancel">Keep Editing</button>
-            <button class="btn-modal-confirm" id="clear-modal-confirm">Clear Post</button>
-        </div>
-    </div>
-</div>
-
+<!-- post-gen-modals.js MUST load before auth.js — auth.js queries auth-modal-*
+     element IDs at top-level execution time, and they only exist after the
+     modal slot has been replaced. -->
+<script src="js/post-gen-modals.js"></script>
 <script src="AuthManager/auth.js"></script>
 <script src="AuthManager/github-api.js"></script>
 <script src="js/post-gen-data.js"></script>

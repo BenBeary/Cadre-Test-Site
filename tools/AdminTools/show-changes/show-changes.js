@@ -93,9 +93,7 @@ function scOpenCommitModal() {
     if (!overlay) return;
     const list = ChangeQueue.list();
     const count1 = document.getElementById('commit-modal-count');
-    const count2 = document.getElementById('commit-modal-count2');
     if (count1) count1.textContent = list.length;
-    if (count2) count2.textContent = list.length;
     const listEl = document.getElementById('commit-modal-list');
     if (listEl) listEl.innerHTML = list.map(function(a) {
         return '<li>' + escHtml(ChangeQueue.labelFor(a)) + '</li>';
@@ -135,11 +133,9 @@ async function scPerformCommit() {
         scCommitting = false;
         scShowCommittingOverlay(false);
         if (result.retried) console.info('Show Changes: commit retried once after a race.');
-        // Refresh Image Manager tree if it's loaded
-        if (typeof imgMgrLoaded !== 'undefined' && imgMgrLoaded && typeof imgMgrLoadAndRender === 'function') {
-            imgMgrLoaded = false;
-            imgMgrLoadAndRender();
-        }
+        // Notify other tools (Image Manager, Blog List, …) so they can
+        // refresh their server-state caches from the new commit.
+        ChangeQueue.notifyCommitSuccess(result);
         scUpdateToolbar();
         scUpdateSidebarCommit();
     } catch (err) {
@@ -156,21 +152,21 @@ function scShowCommittingOverlay(show) {
     if (el) el.style.display = show ? 'flex' : 'none';
 }
 
-// Conflict modal (DOM IDs kept as img-conflict-* for HTML-stability) -
+// Conflict modal ----------------------------------------------------
 function scShowConflictModal(err, total) {
-    const overlay = document.getElementById('img-conflict-modal-overlay');
+    const overlay = document.getElementById('commit-conflict-modal-overlay');
     if (!overlay) return;
-    document.getElementById('img-conflict-action').textContent = 'Batch commit';
-    document.getElementById('img-conflict-path').textContent = '(' + total + ' staged changes)';
-    document.getElementById('img-conflict-message').textContent = err.message || String(err);
-    const progress = document.getElementById('img-conflict-progress');
+    document.getElementById('commit-conflict-action').textContent = 'Batch commit';
+    document.getElementById('commit-conflict-path').textContent = '(' + total + ' staged changes)';
+    document.getElementById('commit-conflict-message').textContent = err.message || String(err);
+    const progress = document.getElementById('commit-conflict-progress');
     if (progress) {
         progress.innerHTML = '<strong>No changes were committed</strong> — the whole batch was rolled back atomically. Reset to drop the queue and re-fetch, or keep the queue and try Commit again once the conflicting file has settled.';
     }
     overlay.style.display = 'flex';
 }
 function scHideConflictModal() {
-    const o = document.getElementById('img-conflict-modal-overlay');
+    const o = document.getElementById('commit-conflict-modal-overlay');
     if (o) o.style.display = 'none';
 }
 
@@ -201,10 +197,7 @@ function scHideContextMenu() {
 }
 
 // Bootstrap ---------------------------------------------------------
-function scBindClick(id, fn) {
-    const el = document.getElementById(id);
-    if (el) el.addEventListener('click', fn);
-}
+// bindClick provided by tools/js/admin-utils.js.
 
 function scInit() {
     if (document.body.dataset.pageRole !== 'admin') return;
@@ -219,11 +212,11 @@ function scInit() {
 
     ChangeQueue.subscribe(scRender);
 
-    scBindClick('show-changes-close',  function() { AdminToolManager.close('show-changes'); });
-    scBindClick('show-changes-undo',   scUndo);
-    scBindClick('show-changes-reset',  scReset);
-    scBindClick('show-changes-commit', scCommitFromUser);
-    scBindClick('btn-commit',          scCommitFromUser);
+    bindClick('show-changes-close',  function() { AdminToolManager.close('show-changes'); });
+    bindClick('show-changes-undo',   scUndo);
+    bindClick('show-changes-reset',  scReset);
+    bindClick('show-changes-commit', scCommitFromUser);
+    bindClick('btn-commit',          scCommitFromUser);
 
     const body = document.getElementById('show-changes-body');
     if (body) body.addEventListener('contextmenu', function(e) {
@@ -233,16 +226,16 @@ function scInit() {
         if (!isNaN(i)) scShowContextMenu(e, i);
     });
 
-    scBindClick('commit-modal-cancel',  scCloseCommitModal);
-    scBindClick('commit-modal-confirm', scPerformCommit);
+    bindClick('commit-modal-cancel',  scCloseCommitModal);
+    bindClick('commit-modal-confirm', scPerformCommit);
     const commitOverlay = document.getElementById('commit-modal-overlay');
     if (commitOverlay) commitOverlay.addEventListener('click', function(e) {
         if (e.target === commitOverlay) scCloseCommitModal();
     });
 
-    scBindClick('img-conflict-keep',  scHideConflictModal);
-    scBindClick('img-conflict-reset', function() { scHideConflictModal(); scReset(); });
-    const conflictOverlay = document.getElementById('img-conflict-modal-overlay');
+    bindClick('commit-conflict-keep',  scHideConflictModal);
+    bindClick('commit-conflict-reset', function() { scHideConflictModal(); scReset(); });
+    const conflictOverlay = document.getElementById('commit-conflict-modal-overlay');
     if (conflictOverlay) conflictOverlay.addEventListener('click', function(e) {
         if (e.target === conflictOverlay) scHideConflictModal();
     });

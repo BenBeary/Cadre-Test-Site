@@ -20,7 +20,8 @@ let blPendingDelete = null;        // {name, path, sha} awaiting delete-modal co
 let blPendingEdit = null;          // {name, path, sha} awaiting edit-modal confirm
 
 const BL_RESERVED_NAMES = ['index.html', 'base-template.html'];
-const BL_BLOG_DATA_PATH = 'json/blog-data.json';
+// BLOG_DATA_PATH, decodeBase64Utf8, findEntryByHref, fetchBlogDataJson —
+// provided by tools/js/admin-utils.js.
 
 async function blFetchBlogs() {
     const items = await ghFetch('GET', '/contents/Announcements-Blogs');
@@ -140,7 +141,7 @@ function blRequestDelete(item) {
     const body = document.getElementById('blog-delete-body');
     if (body) body.innerHTML =
         'Queues deletion of <code>' + escHtml(item.path) + '</code> '
-      + 'and removes the matching entry from <code>' + BL_BLOG_DATA_PATH + '</code>. '
+      + 'and removes the matching entry from <code>' + BLOG_DATA_PATH + '</code>. '
       + 'Both changes commit together when you Commit.';
     overlay.style.display = 'flex';
 }
@@ -164,29 +165,16 @@ async function blConfirmDelete() {
 
 // Stage the delete: fetch JSON (or use pending), find entry, queue actions.
 async function blStageDelete(item) {
-    let currentJson;
-    const pending = ChangeQueue.list().find(function(a) { return a.type === 'updateBlogIndex'; });
-    if (pending) {
-        currentJson = JSON.parse(pending.content);
-    } else {
-        const resp = await ghFetch('GET', '/contents/' + BL_BLOG_DATA_PATH);
-        currentJson = JSON.parse(blDecodeBase64Utf8(resp.content));
-    }
+    const currentJson = await fetchBlogDataJson();
 
     // Find the entry by href (== item.path) across both arrays
     let originalEntry = null;
     let originalTarget = null;
-    const arrays = ['announcements', 'events'];
-    for (let i = 0; i < arrays.length; i++) {
-        const arr = currentJson[arrays[i]];
-        if (!Array.isArray(arr)) continue;
-        const ei = arr.findIndex(function(e) { return e && e.href === item.path; });
-        if (ei >= 0) {
-            originalEntry  = arr[ei];
-            originalTarget = arrays[i];
-            arr.splice(ei, 1);
-            break;
-        }
+    const found = findEntryByHref(currentJson, item.path);
+    if (found) {
+        originalEntry  = found.entry;
+        originalTarget = found.array;
+        currentJson[found.array].splice(found.index, 1);
     }
 
     // If a prior pending publishHtml exists for this path, chain its originalEntry
@@ -217,19 +205,12 @@ async function blStageDelete(item) {
         function(a) { return a.type === 'updateBlogIndex'; },
         {
             type:    'updateBlogIndex',
-            path:    BL_BLOG_DATA_PATH,
+            path:    BLOG_DATA_PATH,
             content: newContent
         }
     );
 
     if (typeof AdminToolManager !== 'undefined') AdminToolManager.open('show-changes');
-}
-
-function blDecodeBase64Utf8(b64WithBreaks) {
-    const binary = atob(b64WithBreaks.replace(/\s/g, ''));
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-    return new TextDecoder('utf-8').decode(bytes);
 }
 
 // Edit flow ----------------------------------------------------------
@@ -281,23 +262,9 @@ async function blLoadAndPopulate(item) {
 
     // Resolve the JSON entry. Prefer a pending updateBlogIndex (admin's
     // staged-but-uncommitted state) over the server file.
-    let jsonObj = null;
-    const pendingIdx = ChangeQueue.list().find(function(a) { return a.type === 'updateBlogIndex'; });
-    if (pendingIdx) {
-        try { jsonObj = JSON.parse(pendingIdx.content); } catch (_) { jsonObj = null; }
-    }
-    if (!jsonObj) {
-        const resp = await ghFetch('GET', '/contents/' + BL_BLOG_DATA_PATH);
-        jsonObj = JSON.parse(blDecodeBase64Utf8(resp.content));
-    }
-    let jsonEntry = null;
-    ['announcements', 'events'].forEach(function(arrName) {
-        if (jsonEntry) return;
-        const arr = jsonObj[arrName];
-        if (!Array.isArray(arr)) return;
-        const e = arr.find(function(x) { return x && x.href === item.path; });
-        if (e) jsonEntry = e;
-    });
+    const jsonObj = await fetchBlogDataJson();
+    const found = findEntryByHref(jsonObj, item.path);
+    const jsonEntry = found ? found.entry : null;
 
     // Resolve the HTML. Prefer a pending publishHtml at this path so the admin
     // edits their own staged-but-uncommitted version, not the older server file.
@@ -309,7 +276,7 @@ async function blLoadAndPopulate(item) {
         htmlString = priorPub.content;
     } else {
         const resp = await ghFetch('GET', '/contents/' + item.path);
-        htmlString = blDecodeBase64Utf8(resp.content);
+        htmlString = decodeBase64Utf8(resp.content);
     }
 
     const saveData = blParseHtmlToSaveData(htmlString, jsonEntry, item.name);
@@ -492,6 +459,15 @@ function blInit() {
 
     // Re-render rows whenever the queue changes (so pending-delete tags update).
     ChangeQueue.subscribe(blRender);
+
+    // After a successful commit, the server file list is stale — drop it so
+    // the next open re-fetches. Re-fetch immediately if the panel is loaded.
+    ChangeQueue.onCommitSuccess(function() {
+        if (blLoaded) {
+            blLoaded = false;
+            blLoadAndRender();
+        }
+    });
 
     const close = document.getElementById('blog-list-close');
     if (close) close.addEventListener('click', function() { AdminToolManager.close('blog-list'); });

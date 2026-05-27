@@ -123,6 +123,22 @@
     white-space: nowrap;
 }
 
+/* Commit conflict modal: error message pre block --------------------- */
+.commit-conflict-message {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 8px 10px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    color: var(--text);
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 120px;
+    overflow-y: auto;
+    margin: 8px 0;
+}
+
 /* Commit modal: custom-name input ------------------------------------ */
 .commit-modal-label {
     display: block;

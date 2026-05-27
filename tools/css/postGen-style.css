@@ -154,34 +154,36 @@ body {
 .tpl-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tpl-desc { font-size: 11px; color: var(--text-muted); line-height: 1.3; }
 
-/* ---- Content builder + Contributors row ---- */
-.content-contrib-row.contrib-open {
-    display: flex;
-    gap: 20px;
-    align-items: flex-start;
-    max-width: 1060px;
+/* ---- Content builder + side panels row ----
+   Step-content is pinned to a fixed 760px column centered in the main area.
+   Side panels (.image-picker-panel / .image-manager-panel on the LEFT,
+   .contrib-sidebar on the RIGHT) are absolutely positioned against this row
+   so they can appear / disappear WITHOUT shifting step-content horizontally.
+   The main block stays in the same place regardless of which panels are open. */
+.content-contrib-row {
+    position: relative;
+    width: 760px;
     margin: 0 auto 20px;
 }
-.content-contrib-row.contrib-open #step-content {
-    flex: 1;
-    max-width: none;
-    margin-left: 0;
-    margin-right: 0;
-    margin-bottom: 0;
+.content-contrib-row #step-content {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
 }
 
-/* ---- Contributors sidebar (inline, next to step 2) ---- */
+/* ---- Contributors sidebar — absolutely positioned to the RIGHT of step 2,
+       so it doesn't push step-content when it opens. ---- */
 .contrib-sidebar {
+    position: absolute;
+    top: 0;
+    left: calc(100% + 20px);
     width: 260px;
-    flex-shrink: 0;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
     padding: 16px;
-    display: flex;
     flex-direction: column;
     gap: 8px;
-    align-self: flex-start;
 }
 .contrib-sidebar-title {
     font-size: 10px;
@@ -263,6 +265,98 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--a
 textarea { resize: vertical; min-height: 80px; }
 .field-hint { font-size: 12px; color: var(--text-muted); }
 .field-hint code { background: rgba(255,255,255,0.07); border-radius: 3px; padding: 1px 4px; font-family: 'Courier New', monospace; font-size: 11px; }
+
+/* Image-path input with a 📁 picker button on the right. */
+.img-input-row { display: flex; gap: 6px; align-items: stretch; }
+.img-input-row > input { flex: 1; }
+.btn-pick-image {
+    background: var(--border-light);      /* lighter than the input bg so it pops */
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 0 10px;
+    line-height: 1;
+    flex-shrink: 0;
+    align-self: stretch;                  /* match neighbour input height */
+    min-width: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, border-color 0.15s;
+}
+.btn-pick-image:hover {
+    background: var(--surface2);           /* hover blends back into the surrounding input bg */
+    border-color: var(--accent);
+}
+/* Toggle-active state: shown while the picker panel is open in response to
+   THIS button. JS toggles the .btn-pick-image-active class. */
+.btn-pick-image-active,
+.btn-pick-image-active:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+}
+
+/* While a picker is in "pick mode", subtle hint that image rows are clickable. */
+.image-picker-pick-mode .img-picker-image,
+.image-manager-pick-mode .img-row-image { cursor: copy; }
+.image-picker-pick-mode .img-picker-image:hover,
+.image-manager-pick-mode .img-row-image:hover {
+    background: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+/* Load button popover — "Open file…" + recent drafts. */
+.load-menu {
+    width: 260px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    z-index: 9999;
+    padding: 4px;
+    display: flex;
+    flex-direction: column;
+}
+.load-menu-item {
+    background: transparent;
+    border: 0;
+    color: var(--text);
+    text-align: left;
+    padding: 8px 10px;
+    border-radius: 5px;
+    font-size: 13px;
+    cursor: pointer;
+    font-family: inherit;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.load-menu-item:hover { background: var(--surface2); }
+.load-menu-divider {
+    color: var(--text-muted);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 8px 10px 4px 10px;
+    font-weight: 700;
+}
+.load-menu-empty {
+    color: var(--text-muted);
+    font-size: 12px;
+    font-style: italic;
+    padding: 8px 10px;
+}
+.load-menu-draft-title { font-weight: 600; }
+.load-menu-draft-when  { color: var(--text-muted); font-size: 11px; }
+.load-menu-clear {
+    color: var(--danger);
+    font-size: 12px;
+    border-top: 1px solid var(--border);
+    margin-top: 4px;
+    padding-top: 8px;
+}
 
 /* ---- Content builder ---- */
 .block-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
