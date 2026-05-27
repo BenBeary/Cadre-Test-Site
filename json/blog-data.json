@@ -34,13 +34,6 @@
     "events": [
         {
             "href": "Announcements-Blogs/template-event.html",
-            "title": "Event",
-            "date": "06-18-2026",
-            "end_date": "06-21-2026",
-            "thumbnail": "images/misc/CAO-placeholder.png"
-        },
-        {
-            "href": "Announcements-Blogs/template-event.html",
             "title": "Filler Card",
             "date": "06-18-2020",
             "end_date": "06-21-2022",
