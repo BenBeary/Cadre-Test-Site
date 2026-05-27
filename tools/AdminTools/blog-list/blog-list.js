@@ -1,7 +1,6 @@
 /* Blog List — admin tool.
    Lists the HTML files in Announcements-Blogs/ on the configured branch.
    Right-click a row →
-     • Copy Relative Path
      • Edit blog: fetches the HTML (or staged pending publishHtml) + matching
        JSON entry, parses it back into the editor's block model, and calls
        applySaveData() so the admin can edit and republish under the same
@@ -96,15 +95,6 @@ function blShowContextMenu(e, item) {
     menu.className = 'admin-context-menu';
     menu.style.left = e.clientX + 'px';
     menu.style.top  = e.clientY + 'px';
-
-    const copy = document.createElement('div');
-    copy.className = 'admin-context-menu-item';
-    copy.textContent = 'Copy Relative Path';
-    copy.addEventListener('click', function() {
-        blHideContextMenu();
-        navigator.clipboard.writeText(item.path).catch(function() {});
-    });
-    menu.appendChild(copy);
 
     // Edit blog — load this post's HTML back into the builder for republish.
     // Disabled while the row has a pending unpublishHtml in the queue: editing
