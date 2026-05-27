@@ -74,13 +74,6 @@
             "thumbnail": "images/misc/CAO-placeholder.png"
         },
         {
-            "href": "Announcements-Blogs/template-event.html",
-            "title": "Filler Card",
-            "date": "06-18-2020",
-            "end_date": "06-21-2022",
-            "thumbnail": "images/misc/CAO-placeholder.png"
-        },
-        {
             "href": "Announcements-Blogs/template-blog-youtube-with-people.html",
             "title": "Youtube with people",
             "date": "06-18-2026",
@@ -92,6 +85,12 @@
             "title": "An Extremely Large Title Description to see how the blog cards will handle Large Titles and if it Will expand properly with out issue",
             "date": "05-29-2026",
             "thumbnail": "images/misc/CAO-placeholder.png"
+        },
+        {
+            "href": "Announcements-Blogs/template-event.html",
+            "title": "The Next Event To Try Out!",
+            "date": "07-22-2026",
+            "thumbnail": ""
         }
     ]
 }
