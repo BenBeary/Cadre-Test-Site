@@ -4,7 +4,7 @@
    main editing area symmetrically. Reuses design tokens from postGen-style.css. */
 
 .admin-tools-sidebar {
-    width: var(--sidebar-w);
+    width: var(--admin-sidebar-w);
     flex-shrink: 0;
     background: var(--surface);
     border-left: 1px solid var(--border);
@@ -15,7 +15,15 @@
     position: sticky;
     top: var(--header-h);
     height: calc(100vh - var(--header-h));
-    overflow-y: auto;
+    overflow: visible;             /* let the toggle-tab stick out to the left */
+    transition: width 0.25s ease, padding 0.25s ease;
+}
+/* Collapsed state — hide every child except the re-open toggle button. */
+body.admin-sidebar-collapsed .admin-tools-sidebar {
+    padding: 0;
+}
+body.admin-sidebar-collapsed .admin-tools-sidebar > *:not(.sidebar-toggle) {
+    display: none;
 }
 
 /* Header row at the top of the sidebar — section title on the left,
@@ -115,6 +123,6 @@
    compensate the sidebar's height so it still extends to the bottom of the viewport. */
 @media (max-height: 800px) {
     .admin-tools-sidebar {
-        height: calc(100vh / 0.8 - var(--header-h));
+        height: calc(100vh / 0.64 - var(--header-h));
     }
 }

@@ -61,6 +61,10 @@ const AdminToolManager = (function () {
         const btn = document.getElementById('btn-tool-' + id);
         if (btn) btn.classList.add('admin-tool-btn-active');
         active = id;
+        // Body class tells the rest of the UI (image picker panel, floating
+        // Preview/Publish bar) that the right-side admin panel is occupying
+        // 360px of the viewport, so they can shift left to stay clear of it.
+        document.body.classList.add('admin-panel-open');
         if (typeof t.onOpen === 'function') {
             try { t.onOpen(); } catch (e) { console.error('AdminToolManager onOpen', id, e); }
         }
@@ -73,7 +77,10 @@ const AdminToolManager = (function () {
         if (panel) panel.style.display = 'none';
         const btn = document.getElementById('btn-tool-' + id);
         if (btn) btn.classList.remove('admin-tool-btn-active');
-        if (active === id) active = null;
+        if (active === id) {
+            active = null;
+            document.body.classList.remove('admin-panel-open');
+        }
         if (typeof t.onClose === 'function') {
             try { t.onClose(); } catch (e) { console.error('AdminToolManager onClose', id, e); }
         }

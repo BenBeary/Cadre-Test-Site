@@ -564,28 +564,75 @@ function imgMgrBindOverlayClose(overlayId, fn) {
     if (o) o.addEventListener('click', function(e) { if (e.target === o) fn(); });
 }
 
+// Panel state — Image Manager owns its own open/close lifecycle now. It is
+// intentionally NOT registered with AdminToolManager: opening Show Changes /
+// Blog List / Blog Index Check from the admin sidebar must NOT close this
+// panel. The panel stays open until the user explicitly closes it.
+let imgMgrPanelOpen = false;
+
+function imgMgrOpenPanel() {
+    const panel = document.getElementById('image-manager-panel');
+    if (!panel) return;
+    panel.style.display = 'flex';
+    panel.classList.remove('image-manager-modal-mode');
+    imgMgrPanelOpen = true;
+    const btn = document.getElementById('btn-open-image-picker');
+    if (btn) btn.classList.add('image-picker-btn-active');
+    if (!imgMgrLoaded) imgMgrLoadAndRender();
+    else imgMgrRebuildLocal();
+}
+
+function imgMgrClosePanel() {
+    const panel = document.getElementById('image-manager-panel');
+    if (!panel) return;
+    panel.style.display = 'none';
+    panel.classList.remove('image-manager-modal-mode');
+    imgMgrPanelOpen = false;
+    const btn = document.getElementById('btn-open-image-picker');
+    if (btn) btn.classList.remove('image-picker-btn-active');
+    imgMgrHideModalBackdrop();
+    const cb = imgMgrPickCallback;
+    imgMgrSetPickMode(false);
+    if (cb) cb(null);
+}
+
+function imgMgrTogglePanel() {
+    if (imgMgrPanelOpen) imgMgrClosePanel();
+    else imgMgrOpenPanel();
+}
+
+// Modal version — used when a 📁 picker button opens the manager. The same
+// panel element is reused, but a class flips its CSS into centered-modal mode
+// and a backdrop is rendered behind it.
+function imgMgrOpenAsModal() {
+    const panel = document.getElementById('image-manager-panel');
+    if (!panel) return;
+    panel.style.display = 'flex';
+    panel.classList.add('image-manager-modal-mode');
+    imgMgrPanelOpen = true;
+    imgMgrShowModalBackdrop();
+    if (!imgMgrLoaded) imgMgrLoadAndRender();
+    else imgMgrRebuildLocal();
+}
+
+function imgMgrShowModalBackdrop() {
+    let bd = document.getElementById('image-manager-modal-backdrop');
+    if (!bd) {
+        bd = document.createElement('div');
+        bd.id = 'image-manager-modal-backdrop';
+        bd.className = 'image-picker-modal-backdrop';
+        bd.addEventListener('click', imgMgrClosePanel);
+        document.body.appendChild(bd);
+    }
+    bd.style.display = 'block';
+}
+function imgMgrHideModalBackdrop() {
+    const bd = document.getElementById('image-manager-modal-backdrop');
+    if (bd) bd.style.display = 'none';
+}
+
 function imgMgrInit() {
     if (document.body.dataset.pageRole !== 'admin') return;
-
-    // Register with the manager — it owns the tool button + open/close coordination.
-    AdminToolManager.register({
-        id:      'image-manager',
-        label:   '📁 Display Images Folder',
-        panelId: 'image-manager-panel',
-        order:   20,
-        onOpen:  function() {
-            if (!imgMgrLoaded) imgMgrLoadAndRender();
-            else imgMgrRebuildLocal();
-        },
-        onClose: function() {
-            // If pick mode was active (panel opened from a 📁 button) and the
-            // user closed the panel without picking, notify the callback so
-            // the originating button drops its toggle-state.
-            const cb = imgMgrPickCallback;
-            imgMgrSetPickMode(false);
-            if (cb) cb(null);
-        }
-    });
 
     // Re-render whenever any tool (or this one) modifies ChangeQueue.
     ChangeQueue.subscribe(imgMgrRebuildLocal);
@@ -600,15 +647,14 @@ function imgMgrInit() {
         }
     });
 
-    bindClick('image-manager-close', function() { AdminToolManager.close('image-manager'); });
+    bindClick('image-manager-close', imgMgrClosePanel);
     bindClick('image-manager-reload', function() {
         if (imgMgrLoading) return;
         imgMgrLoaded = false;
         imgMgrLoadAndRender();
     });
-    // Step 1 "📁 Browse Images" shortcut — toggle the panel (mirrors the
-    // basic page's image-picker toggle).
-    bindClick('btn-open-image-manager', function() { AdminToolManager.toggle('image-manager'); });
+    // Top-nav "📁 Browse Images" — toggle the panel in normal sticky mode.
+    bindClick('btn-open-image-picker', imgMgrTogglePanel);
 
     const body = document.getElementById('image-manager-body');
     if (body) {
@@ -617,10 +663,19 @@ function imgMgrInit() {
             const imageRow = e.target.closest('.img-row-image');
             if (imageRow && imgMgrPickCallback) {
                 const cb = imgMgrPickCallback;
-                imgMgrPickCallback = null;       // prevent onClose from firing cb(null)
+                imgMgrPickCallback = null;       // prevent close-path from firing cb(null)
                 const path = imageRow.dataset.path;
                 imgMgrSetPickMode(false);
-                AdminToolManager.close('image-manager');
+                // Close whatever mode the panel was in (modal or panel).
+                const panel = document.getElementById('image-manager-panel');
+                if (panel) {
+                    panel.style.display = 'none';
+                    panel.classList.remove('image-manager-modal-mode');
+                }
+                imgMgrPanelOpen = false;
+                imgMgrHideModalBackdrop();
+                const btn = document.getElementById('btn-open-image-picker');
+                if (btn) btn.classList.remove('image-picker-btn-active');
                 cb(path || null);                // always notify so the button clears
                 return;
             }
@@ -717,21 +772,17 @@ if (document.readyState === 'loading') {
 // Public API consumed by post-gen.js (the 📁 picker buttons and the
 // image-drag-target drop-File handler).
 window.ImageManager = {
+    // Opens the picker AS A MODAL (centered overlay with backdrop) so the
+    // user can pick a path without the rest of the page chrome distracting.
     openInPickMode: function(callback) {
         if (typeof callback !== 'function') return;
         if (document.body.dataset.pageRole !== 'admin') return;
         imgMgrPickCallback = callback;
         imgMgrSetPickMode(true);
-        AdminToolManager.open('image-manager');
+        imgMgrOpenAsModal();
     },
-    isOpen: function() {
-        const panel = document.getElementById('image-manager-panel');
-        return !!panel && panel.style.display !== 'none' && getComputedStyle(panel).display !== 'none';
-    },
-    close: function() {
-        imgMgrSetPickMode(false);
-        if (typeof AdminToolManager !== 'undefined') AdminToolManager.close('image-manager');
-    },
+    isOpen: function() { return imgMgrPanelOpen; },
+    close:  imgMgrClosePanel,
     // Open the upload modal pre-staged with `file`, with destination defaulted
     // to images/Blog-Images. On confirm, calls onStaged(stagedPath).
     openUploadWithFile: async function(file, onStaged) {

@@ -188,6 +188,7 @@ function ipOpenPanel() {
     if (!panel) return;
     ipPanelOpen = true;
     panel.style.display = 'flex';
+    panel.classList.remove('image-picker-modal-mode');
     const btn = document.getElementById('btn-open-image-picker');
     if (btn) btn.classList.add('image-picker-btn-active');
     if (!ipLoaded) ipLoadAndRender();
@@ -203,13 +204,43 @@ function ipClosePanel() {
     if (!panel) return;
     ipPanelOpen = false;
     panel.style.display = 'none';
+    panel.classList.remove('image-picker-modal-mode');
     const btn = document.getElementById('btn-open-image-picker');
     if (btn) btn.classList.remove('image-picker-btn-active');
+    ipHideModalBackdrop();
     // If pick mode was active, let the caller know it was cancelled so they
     // can clear toggle-state on the originating 📁 button.
     const cb = ipPickCallback;
     ipSetPickMode(false);
     if (cb) cb(null);
+}
+
+// Modal version — reused panel element, with `image-picker-modal-mode` class
+// flipping it into a centered overlay + a backdrop behind it.
+function ipOpenAsModal() {
+    const panel = document.getElementById('image-picker-panel');
+    if (!panel) return;
+    ipPanelOpen = true;
+    panel.style.display = 'flex';
+    panel.classList.add('image-picker-modal-mode');
+    ipShowModalBackdrop();
+    if (!ipLoaded) ipLoadAndRender();
+}
+
+function ipShowModalBackdrop() {
+    let bd = document.getElementById('image-picker-modal-backdrop');
+    if (!bd) {
+        bd = document.createElement('div');
+        bd.id = 'image-picker-modal-backdrop';
+        bd.className = 'image-picker-modal-backdrop';
+        bd.addEventListener('click', ipClosePanel);
+        document.body.appendChild(bd);
+    }
+    bd.style.display = 'block';
+}
+function ipHideModalBackdrop() {
+    const bd = document.getElementById('image-picker-modal-backdrop');
+    if (bd) bd.style.display = 'none';
 }
 
 function ipInit() {
@@ -267,11 +298,13 @@ if (document.readyState === 'loading') {
 
 // Public API consumed by the 📁 picker buttons in post-gen.js.
 window.ImagePicker = {
+    // Opens the picker AS A MODAL (centered overlay) — distinct from the
+    // top-nav "📁 Browse Images" toggle which opens the inline sticky panel.
     openInPickMode: function(callback) {
         if (typeof callback !== 'function') return;
         ipPickCallback = callback;
         ipSetPickMode(true);
-        ipOpenPanel();
+        ipOpenAsModal();
     },
     isOpen: function() { return ipPanelOpen; },
     close:  function() { ipClosePanel(); }

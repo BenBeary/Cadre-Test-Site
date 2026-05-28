@@ -30,6 +30,44 @@ body {
     min-height: 100vh;
 }
 
+/* ---- Custom scrollbars (applied to every scrollable element) ----
+   Dark track, light-gray thumb that brightens to white on hover, and white
+   directional arrows on the buttons (where the platform paints them). */
+html {
+    scrollbar-color: #d0d0d0 #15172a;   /* Firefox: thumb track */
+    scrollbar-width: thin;
+}
+::-webkit-scrollbar         { width: 12px; height: 12px; }
+::-webkit-scrollbar-track   { background: #15172a; }
+::-webkit-scrollbar-corner  { background: #15172a; }
+::-webkit-scrollbar-thumb {
+    background: #d0d0d0;
+    border: 2px solid #15172a;          /* inset gap so the thumb reads as a pill */
+    border-radius: 6px;
+}
+::-webkit-scrollbar-thumb:hover { background: #ffffff; }
+::-webkit-scrollbar-button {
+    background-color: #15172a;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 8px 8px;
+    display: block;
+    height: 14px;
+    width: 12px;
+}
+::-webkit-scrollbar-button:vertical:decrement {
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'><polygon points='6,3 2,8 10,8' fill='white'/></svg>");
+}
+::-webkit-scrollbar-button:vertical:increment {
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'><polygon points='6,9 2,4 10,4' fill='white'/></svg>");
+}
+::-webkit-scrollbar-button:horizontal:decrement {
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'><polygon points='3,6 8,2 8,10' fill='white'/></svg>");
+}
+::-webkit-scrollbar-button:horizontal:increment {
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'><polygon points='9,6 4,2 4,10' fill='white'/></svg>");
+}
+
 /* ---- Header ---- */
 .site-header {
     background: var(--surface);
@@ -102,9 +140,25 @@ body {
     min-height: calc(100vh - var(--header-h));
 }
 
-/* ---- Left sidebar (templates) ---- */
+/* ---- Left sidebar (templates) ----
+   Per-sidebar widths use CSS variables so the collapse toggles can flip a
+   sidebar to its narrow "stub" width without touching every consumer. The
+   image picker + floating Preview/Publish bar read these variables to stay
+   aligned with the live layout. */
+body {
+    --template-sidebar-w: var(--sidebar-w);
+}
+body[data-page-role="admin"] {
+    --admin-sidebar-w: var(--sidebar-w);
+}
+body[data-page-role="basic"] {
+    --admin-sidebar-w: 0px;          /* basic page has no admin sidebar */
+}
+body.template-sidebar-collapsed { --template-sidebar-w: 36px; }
+body.admin-sidebar-collapsed    { --admin-sidebar-w:    36px; }
+
 .template-sidebar {
-    width: var(--sidebar-w);
+    width: var(--template-sidebar-w);
     flex-shrink: 0;
     background: var(--surface);
     border-right: 1px solid var(--border);
@@ -115,7 +169,72 @@ body {
     position: sticky;
     top: var(--header-h);
     height: calc(100vh - var(--header-h));
-    overflow-y: auto;
+    overflow: visible;             /* allow the toggle-tab to stick out */
+    transition: width 0.25s ease, padding 0.25s ease;
+}
+.template-sidebar > .template-nav {
+    overflow-y: auto;              /* scroll inside the nav instead of the sidebar */
+    flex: 1;
+    min-height: 0;
+}
+/* When collapsed, hide every child except the toggle button and tighten
+   padding so the sidebar reads as a thin rail with just the re-open button. */
+body.template-sidebar-collapsed .template-sidebar {
+    padding: 0;
+    border-right: 1px solid var(--border);
+}
+body.template-sidebar-collapsed .template-sidebar > *:not(.sidebar-toggle) {
+    display: none;
+}
+
+/* ---- Collapse / expand toggle buttons (both sidebars) ----
+   Vertical tab sitting flush AGAINST the outer edge of the sidebar — fully
+   outside it, with the side touching the sidebar flattened so the two edges
+   join cleanly. */
+.sidebar-toggle {
+    position: absolute;
+    top: 14px;
+    width: 32px;
+    height: 56px;
+    background: var(--surface);
+    border: 1px solid var(--border-light);
+    color: var(--text);
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 5;
+    transition: background 0.15s, border-color 0.15s, transform 0.15s;
+}
+.sidebar-toggle:hover  { background: var(--surface2); border-color: var(--accent); }
+.sidebar-toggle:active { transform: scale(0.96); }
+
+/* Template sidebar (LEFT in the layout) — tab sticks out to the RIGHT.
+   Flatten the LEFT side (touching the sidebar) and drop its border so the
+   two edges merge into one line. */
+.sidebar-toggle-left {
+    right: -32px;
+    border-radius: 0 10px 10px 0;
+    border-left: 0;
+    box-shadow: 4px 4px 12px rgba(0, 0, 0, 0.35);
+}
+/* Admin sidebar (RIGHT in the layout) — tab sticks out to the LEFT.
+   Flatten the RIGHT side. */
+.sidebar-toggle-right {
+    left: -32px;
+    border-radius: 10px 0 0 10px;
+    border-right: 0;
+    box-shadow: -4px 4px 12px rgba(0, 0, 0, 0.35);
+    transition: left 0.2s ease, background 0.15s, border-color 0.15s, transform 0.15s;
+}
+/* When an admin tool panel (Show Changes / Blog List / Blog Index Check) is
+   open, slide the toggle past it — 360px tool-panel width + the same 32px
+   tab width — so the toggle hugs the LEFT edge of the visible admin column
+   instead of being hidden behind the tool panel. */
+body.admin-panel-open .sidebar-toggle-right {
+    left: calc(-32px - 360px);
 }
 
 .sidebar-section-title {
@@ -261,6 +380,9 @@ input[type="text"], input[type="date"], input[type="url"], textarea, select {
     transition: border-color 0.15s;
     width: 100%;
 }
+/* Tell the browser this is a dark UI so the date input's calendar-picker
+   icon is drawn in the light/white variant instead of dark-on-dark. */
+input[type="date"] { color-scheme: dark; }
 input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); }
 textarea { resize: vertical; min-height: 80px; }
 .field-hint { font-size: 12px; color: var(--text-muted); }
@@ -481,7 +603,38 @@ textarea { resize: vertical; min-height: 80px; }
 .btn-col-toggle.col-active-b { background: rgba(130,80,220,0.2); border-color: #b070f8; color: #b070f8; }
 
 /* ---- Generate button ---- */
-.generate-bar { display: flex; justify-content: center; gap: 12px; margin: 10px 0 24px; max-width: 760px; margin-left: auto; margin-right: auto; }
+/* Floating action bar — Preview + Generate / Publish.
+   Fixed to the bottom-right of the viewport with padding so the buttons are
+   always reachable no matter where the user has scrolled.
+   When an admin sidebar tool is open, the bar shifts left by the panel's
+   360px so it doesn't get hidden behind the admin panel. */
+.generate-bar {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    display: flex;
+    gap: 12px;
+    z-index: 60;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 10px 14px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+    margin: 0;
+    max-width: none;
+    transition: right 0.2s ease;
+}
+/* Admin page: always clear the admin-tools sidebar that lives on the right
+   edge of the app-layout. Uses --admin-sidebar-w so collapsing the sidebar
+   slides the floating bar back to the right edge of the viewport. */
+body[data-page-role="admin"] .generate-bar {
+    right: calc(24px + var(--admin-sidebar-w));
+}
+/* And when an admin tool panel (Show Changes / Blog List / Blog Index Check)
+   is open, clear that panel's additional 360px too. */
+body[data-page-role="admin"].admin-panel-open .generate-bar {
+    right: calc(24px + var(--admin-sidebar-w) + 360px);
+}
 .btn-generate {
     background: var(--accent);
     border: none;
@@ -710,10 +863,10 @@ body.preview-open { overflow: hidden; }
    to compensate. Larger displays bypass this block and keep full size. */
 @media (max-height: 800px) {
     body {
-        zoom: 0.8;
-        min-height: calc(100vh / 0.8);
+        zoom: 0.64;                          /* 0.8 * 0.8 — another 20% smaller */
+        min-height: calc(100vh / 0.64);
     }
     .template-sidebar {
-        height: calc(100vh / 0.8 - var(--header-h));
+        height: calc(100vh / 0.64 - var(--header-h));
     }
 }

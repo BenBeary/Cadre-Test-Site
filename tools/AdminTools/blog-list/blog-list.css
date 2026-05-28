@@ -101,6 +101,6 @@
 
 @media (max-height: 800px) {
     .blog-list-panel {
-        height: calc(100vh / 0.8 - var(--header-h));
+        height: calc(100vh / 0.64 - var(--header-h));
     }
 }

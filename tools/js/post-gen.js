@@ -497,9 +497,10 @@ function initImagePickerButtons() {
             alert('Image picker is not available on this page.');
             return;
         }
-        // Toggle: clicking again (or any pick button) while the picker is
-        // already open closes it.
-        if (typeof picker.isOpen === 'function' && picker.isOpen()) {
+        // Toggle: clicking the SAME pick button again closes the modal. Clicking
+        // a DIFFERENT pick button while one is active just swaps the target —
+        // openInPickMode overwrites the previous callback in the picker module.
+        if (activePickBtn === btn) {
             if (typeof picker.close === 'function') picker.close();
             clearActivePickBtn();
             return;
@@ -620,7 +621,8 @@ function requestClear() {
 
 function initClearPostEvents() {
     document.getElementById('btn-clear-post').addEventListener('click', requestClear);
-    document.getElementById('btn-clear-post-step').addEventListener('click', requestClear);
+    const stepClear = document.getElementById('btn-clear-post-step');
+    if (stepClear) stepClear.addEventListener('click', requestClear);
     document.getElementById('clear-modal-cancel').addEventListener('click', hideClearModal);
     document.getElementById('clear-modal-confirm').addEventListener('click', function() {
         hideClearModal();
@@ -1018,6 +1020,53 @@ function initFilenameSync() {
     });
 }
 
+// ─── Sidebar collapse toggles (template + admin) ──────────────────────────────
+// Each sidebar has a small button in its outer corner that flips a body class
+// on/off. CSS shrinks the sidebar to a 36px stub when collapsed; the toggle
+// remains visible as the re-open affordance. State persists in localStorage.
+
+const SIDEBAR_STATE_KEY = 'cadre.postgen.sidebarState';
+
+function readSidebarState() {
+    try {
+        return JSON.parse(localStorage.getItem(SIDEBAR_STATE_KEY) || '{}') || {};
+    } catch (_) { return {}; }
+}
+function writeSidebarState(state) {
+    try { localStorage.setItem(SIDEBAR_STATE_KEY, JSON.stringify(state)); } catch (_) {}
+}
+
+function setSidebarCollapsed(which /* 'template' | 'admin' */, collapsed) {
+    const bodyCls   = which + '-sidebar-collapsed';
+    const btn       = document.getElementById('btn-' + which + '-sidebar-toggle');
+    const openIcon  = which === 'admin' ? '▶' : '◀';   // collapse direction
+    const closeIcon = which === 'admin' ? '◀' : '▶';   // expand direction
+    document.body.classList.toggle(bodyCls, collapsed);
+    if (btn) {
+        btn.textContent = collapsed ? closeIcon : openIcon;
+        btn.title       = collapsed ? 'Show ' + which + ' sidebar' : 'Hide ' + which + ' sidebar';
+        btn.setAttribute('aria-label', btn.title);
+    }
+    const state = readSidebarState();
+    state[which] = !!collapsed;
+    writeSidebarState(state);
+}
+
+function initSidebarToggles() {
+    const saved = readSidebarState();
+    if (saved.template) setSidebarCollapsed('template', true);
+    if (saved.admin)    setSidebarCollapsed('admin', true);
+
+    const tBtn = document.getElementById('btn-template-sidebar-toggle');
+    if (tBtn) tBtn.addEventListener('click', function() {
+        setSidebarCollapsed('template', !document.body.classList.contains('template-sidebar-collapsed'));
+    });
+    const aBtn = document.getElementById('btn-admin-sidebar-toggle');
+    if (aBtn) aBtn.addEventListener('click', function() {
+        setSidebarCollapsed('admin', !document.body.classList.contains('admin-sidebar-collapsed'));
+    });
+}
+
 // ─── Init ─────────────────────────────────────────────────────────────────────
 
 initElementCache();
@@ -1033,6 +1082,7 @@ initPreviewEvents();
 initOutputButtons();
 initFilenameSync();
 initImagePickerButtons();
+initSidebarToggles();
 initAutosave();
 loadTemplates();
 loadBaseTemplate();
