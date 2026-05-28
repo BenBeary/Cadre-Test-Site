@@ -46,9 +46,15 @@ const POST_GEN_SHARED_MODALS_HTML = `
     <div class="modal-box">
         <div class="modal-title">Sign in with GitHub</div>
         <div class="modal-body">
-            <p>Paste a fine-grained Personal Access Token scoped to this repo. The token is stored only in this browser's localStorage and is used to authenticate admin features.</p>
+            <p>Paste a fine-grained Personal Access Token scoped to this repo. The token is stored only in this browser and is used to authenticate admin features.</p>
             <p><a id="auth-generate-link" href="#" target="_blank" rel="noopener">Generate a token →</a></p>
             <input type="password" id="auth-pat-input" placeholder="github_pat_…" autocomplete="off" spellcheck="false">
+            <label class="settings-row settings-row-compact">
+                <div class="settings-row-text">
+                    <div class="settings-row-label">Keep Me Logged In</div>
+                </div>
+                <input type="checkbox" id="auth-keep-logged-in" class="settings-toggle" checked>
+            </label>
             <div class="auth-error" id="auth-error" style="display:none"></div>
         </div>
         <div class="modal-actions">
@@ -66,6 +72,30 @@ const POST_GEN_SHARED_MODALS_HTML = `
         <div class="modal-actions">
             <button class="btn-modal-cancel" id="clear-modal-cancel">Keep Editing</button>
             <button class="btn-modal-confirm" id="clear-modal-confirm">Clear Post</button>
+        </div>
+    </div>
+</div>
+
+<!-- Settings modal — opened by the ⚙ button in the page header. -->
+<div class="modal-overlay" id="settings-modal-overlay" style="display:none">
+    <div class="modal-box">
+        <div class="modal-title">Settings</div>
+        <div class="modal-body">
+            <label class="settings-row">
+                <div class="settings-row-text">
+                    <div class="settings-row-label">Show Image Folder Thumbnails</div>
+                </div>
+                <input type="checkbox" id="setting-show-thumbnails" class="settings-toggle" checked>
+            </label>
+            <label class="settings-row" id="settings-row-keep-logged-in">
+                <div class="settings-row-text">
+                    <div class="settings-row-label">Keep Me Logged In</div>
+                </div>
+                <input type="checkbox" id="setting-keep-logged-in" class="settings-toggle">
+            </label>
+        </div>
+        <div class="modal-actions">
+            <button class="btn-modal-confirm" id="settings-modal-close">Done</button>
         </div>
     </div>
 </div>

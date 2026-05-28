@@ -29,6 +29,20 @@ const LS_KEYS = {
     avatar: 'pg_user_avatar'
 };
 
+// Stores the user's last "Keep Me Logged In" choice so the sign-in modal and
+// the settings toggle can pre-fill the right state on next open. Lives outside
+// LS_KEYS because it survives signOut() — it's a preference, not credentials.
+const LS_KEEP_PREF = 'pg_keep_logged_in_pref';   // '1' or '0'
+
+function readKeepLoggedInPref() {
+    const v = localStorage.getItem(LS_KEEP_PREF);
+    if (v === null) return true;   // default ON (common case: stay logged in)
+    return v === '1';
+}
+function writeKeepLoggedInPref(persistent) {
+    try { localStorage.setItem(LS_KEEP_PREF, persistent ? '1' : '0'); } catch (_) {}
+}
+
 // Filenames for the redirect logic. Both files live in `tools/`.
 const PAGE_BASIC_URL = 'post-generator.html';
 const PAGE_ADMIN_URL = 'post-generator-admin.html';
@@ -38,20 +52,57 @@ function getPageRole() { return document.body.dataset.pageRole; }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
+// Credentials live in EITHER localStorage (persistent across browser sessions)
+// or sessionStorage (cleared automatically when the browser/tab closes). The
+// "Keep Me Logged In" setting picks which store is the source of truth —
+// flipping it calls makePersistent() / makeSessionOnly() to move the values.
 function isAuthenticated() {
-    return !!localStorage.getItem(LS_KEYS.pat);
+    return !!(localStorage.getItem(LS_KEYS.pat) || sessionStorage.getItem(LS_KEYS.pat));
 }
 
 function getStoredToken() {
-    return localStorage.getItem(LS_KEYS.pat) || '';
+    return localStorage.getItem(LS_KEYS.pat) || sessionStorage.getItem(LS_KEYS.pat) || '';
 }
 
 function getCurrentUser() {
     if (!isAuthenticated()) return null;
     return {
-        login:  localStorage.getItem(LS_KEYS.login)  || '',
-        avatar: localStorage.getItem(LS_KEYS.avatar) || ''
+        login:  localStorage.getItem(LS_KEYS.login)  || sessionStorage.getItem(LS_KEYS.login)  || '',
+        avatar: localStorage.getItem(LS_KEYS.avatar) || sessionStorage.getItem(LS_KEYS.avatar) || ''
     };
+}
+
+// True when credentials are in localStorage — i.e. user opted to stay logged
+// in across browser restarts. False = sessionStorage only = this-tab-only.
+function isPersistentLogin() {
+    return !!localStorage.getItem(LS_KEYS.pat);
+}
+
+// Toggle ON: move sessionStorage credentials into localStorage so they survive
+// browser restarts. No-op if values are already in localStorage.
+function makePersistent() {
+    Object.keys(LS_KEYS).forEach(function(field) {
+        const key = LS_KEYS[field];
+        const sVal = sessionStorage.getItem(key);
+        if (sVal !== null && !localStorage.getItem(key)) {
+            localStorage.setItem(key, sVal);
+        }
+        // Drop the sessionStorage copy now that localStorage owns it.
+        sessionStorage.removeItem(key);
+    });
+}
+
+// Toggle OFF: move localStorage credentials into sessionStorage so the user
+// stays logged in for the current tab but is logged out on next browser open.
+function makeSessionOnly() {
+    Object.keys(LS_KEYS).forEach(function(field) {
+        const key = LS_KEYS[field];
+        const lVal = localStorage.getItem(key);
+        if (lVal !== null) {
+            sessionStorage.setItem(key, lVal);
+            localStorage.removeItem(key);
+        }
+    });
 }
 
 // ─── Internals ────────────────────────────────────────────────────────────────
@@ -63,7 +114,7 @@ function authEscape(str) {
         .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-async function validateAndStorePAT(pat) {
+async function validateAndStorePAT(pat, persistent) {
     const res = await fetch('https://api.github.com/user', {
         headers: {
             'Authorization': 'Bearer ' + pat,
@@ -72,14 +123,22 @@ async function validateAndStorePAT(pat) {
     });
     if (!res.ok) throw new Error('Invalid token (' + res.status + ')');
     const user = await res.json();
-    localStorage.setItem(LS_KEYS.pat,    pat);
-    localStorage.setItem(LS_KEYS.login,  user.login || '');
-    localStorage.setItem(LS_KEYS.avatar, user.avatar_url || '');
+    // persistent === true (default)  → localStorage   (survives browser restart)
+    // persistent === false           → sessionStorage (cleared on browser close)
+    const store = persistent === false ? sessionStorage : localStorage;
+    const other = persistent === false ? localStorage   : sessionStorage;
+    Object.values(LS_KEYS).forEach(function(k) { other.removeItem(k); });
+    store.setItem(LS_KEYS.pat,    pat);
+    store.setItem(LS_KEYS.login,  user.login || '');
+    store.setItem(LS_KEYS.avatar, user.avatar_url || '');
     return user;
 }
 
 function signOut() {
-    Object.values(LS_KEYS).forEach(function(k) { localStorage.removeItem(k); });
+    Object.values(LS_KEYS).forEach(function(k) {
+        localStorage.removeItem(k);
+        sessionStorage.removeItem(k);
+    });
     // Signing out from the admin page means you're no longer an admin — kick
     // back to the basic page so the gate logic re-applies on next visit.
     if (getPageRole() === 'admin') {
@@ -139,6 +198,10 @@ function openAuthModal() {
     if (!overlay) return;
     document.getElementById('auth-generate-link').href = buildGenerateTokenUrl();
     document.getElementById('auth-pat-input').value = '';
+    // Pre-fill the persistence toggle from the user's last saved preference
+    // (defaults to ON for first-time sign-in).
+    const keepEl = document.getElementById('auth-keep-logged-in');
+    if (keepEl) keepEl.checked = readKeepLoggedInPref();
     hideAuthError();
     overlay.style.display = 'flex';
     setTimeout(function() {
@@ -178,13 +241,19 @@ async function handleSignInSubmit() {
     const pat = input.value.trim();
     if (!pat) { showAuthError('Please paste a token.'); return; }
 
+    // "Keep Me Logged In" checkbox lives in the sign-in modal. Save the user's
+    // choice so the next time they sign in (or open Settings) it pre-fills.
+    const keepEl = document.getElementById('auth-keep-logged-in');
+    const persistent = keepEl ? !!keepEl.checked : true;
+    writeKeepLoggedInPref(persistent);
+
     btn.disabled = true;
     const originalLabel = btn.textContent;
     btn.textContent = 'Signing in…';
     hideAuthError();
 
     try {
-        await validateAndStorePAT(pat);
+        await validateAndStorePAT(pat, persistent);
         closeAuthModal();
         // Successful sign-in on the basic (restricted) page promotes the user
         // straight into the admin tool.

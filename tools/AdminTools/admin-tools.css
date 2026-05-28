@@ -18,9 +18,10 @@
     overflow: visible;             /* let the toggle-tab stick out to the left */
     transition: width 0.25s ease, padding 0.25s ease;
 }
-/* Collapsed state — hide every child except the re-open toggle button. */
+/* Collapsed state — 10px rail; hide every child except the re-open toggle. */
 body.admin-sidebar-collapsed .admin-tools-sidebar {
     padding: 0;
+    /* Keep border-left so the collapsed rail still has a divider. */
 }
 body.admin-sidebar-collapsed .admin-tools-sidebar > *:not(.sidebar-toggle) {
     display: none;

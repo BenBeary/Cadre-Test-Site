@@ -133,6 +133,92 @@ html {
 .btn-header-action:disabled { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
 .btn-header-action.btn-header-danger:hover { color: var(--danger); border-color: var(--danger); }
 
+/* ---- Settings gear button (lives at the far left of the header) ----
+   The button itself is the square — always visible, never rotates.
+   The inner .btn-settings-icon is the gear glyph, which spins on hover. */
+.btn-settings {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    padding: 6px 10px;
+    transition: color 0.15s, background 0.15s, border-color 0.15s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.btn-settings:hover {
+    background: var(--border-light);
+    color: var(--text);
+    border-color: var(--accent);
+}
+.btn-settings-icon {
+    display: inline-block;
+    line-height: 1;
+    transition: transform 0.4s;
+}
+.btn-settings:hover .btn-settings-icon { transform: rotate(45deg); }
+
+/* ---- Settings modal rows ---- */
+.settings-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 0;
+    cursor: pointer;
+}
+.settings-row + .settings-row { border-top: 1px solid var(--border); }
+/* Compact variant used inside other modals (e.g. the sign-in modal) — no top
+   separator and a tighter padding so it doesn't break the surrounding rhythm. */
+.settings-row-compact {
+    padding: 10px 0 0;
+    border-top: 0;
+    margin-top: 4px;
+}
+.settings-row-text  { flex: 1; }
+.settings-row-label { font-size: 14px; font-weight: 600; color: var(--text); }
+.settings-row-hint  { font-size: 12px; color: var(--text-muted); margin-top: 2px; line-height: 1.4; }
+
+/* iOS-style toggle */
+.settings-toggle {
+    -webkit-appearance: none; appearance: none;
+    position: relative;
+    width: 44px; height: 24px;
+    background: var(--border);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 0.15s;
+    flex-shrink: 0;
+    margin: 0;
+}
+.settings-toggle::after {
+    content: '';
+    position: absolute;
+    top: 2px; left: 2px;
+    width: 20px; height: 20px;
+    background: white;
+    border-radius: 50%;
+    transition: transform 0.15s;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+.settings-toggle:checked         { background: var(--accent); }
+.settings-toggle:checked::after  { transform: translateX(20px); }
+
+/* When the "Show image thumbnails" setting is OFF, hide the <img> thumbnails
+   in both image picker and image manager, then paint a generic 🖼 emoji into
+   the icon slot via ::before. */
+body.hide-thumbnails .img-picker-thumb,
+body.hide-thumbnails .img-row-thumb { display: none; }
+body.hide-thumbnails .img-picker-image .img-picker-icon::before,
+body.hide-thumbnails .img-row-image    .img-row-icon::before {
+    content: '🖼';
+    font-size: 14px;
+    line-height: 1;
+}
+
 /* ---- Two-panel app layout ---- */
 .app-layout {
     display: flex;
@@ -154,8 +240,12 @@ body[data-page-role="admin"] {
 body[data-page-role="basic"] {
     --admin-sidebar-w: 0px;          /* basic page has no admin sidebar */
 }
-body.template-sidebar-collapsed { --template-sidebar-w: 36px; }
-body.admin-sidebar-collapsed    { --admin-sidebar-w:    36px; }
+/* Collapsed: shrink the sidebar to a 10px rail so its surface and divider
+   line still hint at the sidebar along the page edge. The toggle tab is
+   positioned absolutely outside the sidebar's edge so it remains visible
+   (and clickable) regardless of width. */
+body.template-sidebar-collapsed { --template-sidebar-w: 10px; }
+body.admin-sidebar-collapsed    { --admin-sidebar-w:    10px; }
 
 .template-sidebar {
     width: var(--template-sidebar-w);
@@ -181,7 +271,7 @@ body.admin-sidebar-collapsed    { --admin-sidebar-w:    36px; }
    padding so the sidebar reads as a thin rail with just the re-open button. */
 body.template-sidebar-collapsed .template-sidebar {
     padding: 0;
-    border-right: 1px solid var(--border);
+    /* Keep border-right so the 10px collapsed rail still has a divider. */
 }
 body.template-sidebar-collapsed .template-sidebar > *:not(.sidebar-toggle) {
     display: none;
