@@ -844,6 +844,9 @@ body[data-page-role="admin"].admin-panel-open .generate-bar {
     justify-content: center;
     z-index: 500;
 }
+/* No per-modal override needed any more — the picker modal sits at z-index
+   100, well below the .modal-overlay default of 500, so every real modal
+   (Add Image, Settings, Overwrite confirm, etc.) naturally stacks above it. */
 .modal-box {
     background: var(--surface);
     border: 1px solid var(--border);

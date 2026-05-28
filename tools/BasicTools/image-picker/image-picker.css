@@ -30,7 +30,10 @@ body.admin-panel-open .image-picker-panel:not(.image-picker-modal-mode) {
 
 /* Modal mode — triggered when a 📁 picker button (next to an image-path
    input) opens the picker. Replaces the side-pinned panel with a centered
-   overlay + backdrop so the user can focus on selection. */
+   overlay + backdrop so the user can focus on selection.
+   Sits at a LOW z-index (100) so any real .modal-overlay opened over the top
+   of it — e.g. the Add Image upload modal, file-overwrite confirm, settings
+   — stacks above the picker and remains interactive. */
 .image-picker-panel.image-picker-modal-mode {
     top: 50%;
     left: 50%;
@@ -38,14 +41,15 @@ body.admin-panel-open .image-picker-panel:not(.image-picker-modal-mode) {
     transform: translate(-50%, -50%);
     width: min(92vw, 540px);
     max-height: 80vh;
-    z-index: 1500;
+    z-index: 100;
     box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55);
 }
 .image-picker-modal-backdrop {
     position: fixed;
     inset: 0;
     background: rgba(0, 0, 0, 0.55);
-    z-index: 1400;
+    z-index: 99;
+    cursor: pointer;             /* hint that clicking the backdrop closes the modal */
 }
 
 .image-picker-header {
