@@ -53,6 +53,12 @@
             "title": "Laguna Interactive goes Public and purchases all of faze clan stock",
             "date": "06-06-2026",
             "thumbnail": "images/Blog-Images/Test-Images/112121212.png"
+        },
+        {
+            "href": "Announcements-Blogs/laguna-interactive-holds-a-seminar-about-game-development.html",
+            "title": "Laguna Interactive Holds A Seminar About Game Development",
+            "date": "11-30-2030",
+            "thumbnail": "images/Blog-Images/Test-Images/Business Card FRONT.png"
         }
     ],
     "events": [
@@ -68,12 +74,6 @@
             "title": "The Next Event To Try Out!",
             "date": "07-22-2026",
             "thumbnail": ""
-        },
-        {
-            "href": "Announcements-Blogs/laguna-interactive-holds-a-seminar-about-game-development.html",
-            "title": "Laguna Interactive Holds A Seminar About Game Development",
-            "date": "11-30-2030",
-            "thumbnail": "images/Blog-Images/Test-Images/Business Card FRONT.png"
         }
     ]
 }
