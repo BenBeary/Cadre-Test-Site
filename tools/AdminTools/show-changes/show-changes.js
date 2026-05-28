@@ -38,11 +38,15 @@ function scRender() {
 function scTypeTag(action) {
     const type = action.type;
 
-    // Overwrite: editing an existing blog (publishHtml carrying an originalEntry)
-    // or the bundled blog-index JSON rewrite that always replaces an existing file.
+    // Overwrite covers three cases:
+    //   1. publishHtml carrying an originalEntry — editing an existing blog
+    //   2. updateBlogIndex — always replaces the existing blog-data.json
+    //   3. uploadFile flagged overwrite — replacing an image that exists on
+    //      the server snapshot (set by image-manager when staging)
     const isOverwrite =
         (type === 'publishHtml' && action.originalEntry) ||
-        type === 'updateBlogIndex';
+        type === 'updateBlogIndex' ||
+        (type === 'uploadFile' && action.overwrite);
     if (isOverwrite)
         return '<span class="show-changes-tag show-changes-tag-overwrite">+overwrite</span>';
 

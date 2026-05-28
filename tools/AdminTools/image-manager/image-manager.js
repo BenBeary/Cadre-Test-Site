@@ -499,10 +499,15 @@ async function imgMgrStageImageUploads(staged, folderPath) {
         }
         if (decision === 'skip') continue;
 
+        // True overwrite = file already existed on the SERVER snapshot (not just
+        // a previously-staged upload). Show Changes uses this flag to tag the
+        // action "+overwrite" instead of "+upload".
+        const existedOnServer = !!imgMgrFindNode(imgMgrServerTree, path);
+
         // replaceOrAdd dedupes if the same path was already staged earlier.
         ChangeQueue.replaceOrAdd(
             function(a) { return a.type === 'uploadFile' && a.path === path; },
-            { type: 'uploadFile', path: path, base64: f.base64, name: f.name, size: f.size }
+            { type: 'uploadFile', path: path, base64: f.base64, name: f.name, size: f.size, overwrite: existedOnServer }
         );
     }
 }
