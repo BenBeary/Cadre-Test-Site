@@ -46,9 +46,10 @@ const POST_GEN_SHARED_MODALS_HTML = `
     <div class="modal-box">
         <div class="modal-title">Sign in with GitHub</div>
         <div class="modal-body">
-            <p>Paste a fine-grained Personal Access Token scoped to this repo. The token is stored only in this browser and is used to authenticate admin features.</p>
-            <p><a id="auth-generate-link" href="#" target="_blank" rel="noopener">Generate a token →</a></p>
-            <input type="password" id="auth-pat-input" placeholder="github_pat_…" autocomplete="off" spellcheck="false">
+            <p>Paste a GitHub Personal Access Token below. The token is stored only in this browser and is used to authenticate admin features.</p>
+            <p><strong>Repo owner?</strong> <a id="auth-generate-link" href="#" target="_blank" rel="noopener">Generate a fine-grained PAT →</a></p>
+            <p><strong>Contributor?</strong> <a id="auth-contributor-setup-link" href="contributor-setup.html" target="_blank" rel="noopener">Follow the setup guide →</a> (classic PAT with the <code>public_repo</code> scope — fine-grained PATs can't target repos you don't own).</p>
+            <input type="password" id="auth-pat-input" placeholder="github_pat_… or ghp_…" autocomplete="off" spellcheck="false">
             <label class="settings-row settings-row-compact">
                 <div class="settings-row-text">
                     <div class="settings-row-label">Keep Me Logged In</div>

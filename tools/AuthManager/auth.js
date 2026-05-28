@@ -26,7 +26,8 @@ const GITHUB_REPO  = 'Cadre-Test-Site';
 const LS_KEYS = {
     pat:    'pg_pat',
     login:  'pg_user_login',
-    avatar: 'pg_user_avatar'
+    avatar: 'pg_user_avatar',
+    expiry: 'pg_pat_expiry'
 };
 
 // Stores the user's last "Keep Me Logged In" choice so the sign-in modal and
@@ -72,6 +73,10 @@ function getCurrentUser() {
     };
 }
 
+function getTokenExpiry() {
+    return localStorage.getItem(LS_KEYS.expiry) || sessionStorage.getItem(LS_KEYS.expiry) || '';
+}
+
 // True when credentials are in localStorage — i.e. user opted to stay logged
 // in across browser restarts. False = sessionStorage only = this-tab-only.
 function isPersistentLogin() {
@@ -115,14 +120,32 @@ function authEscape(str) {
 }
 
 async function validateAndStorePAT(pat, persistent) {
-    const res = await fetch('https://api.github.com/user', {
-        headers: {
-            'Authorization': 'Bearer ' + pat,
-            'Accept': 'application/vnd.github+json'
-        }
-    });
+    const authHeaders = {
+        'Authorization': 'Bearer ' + pat,
+        'Accept': 'application/vnd.github+json'
+    };
+
+    const res = await fetch('https://api.github.com/user', { headers: authHeaders });
     if (!res.ok) throw new Error('Invalid token (' + res.status + ')');
     const user = await res.json();
+    // Returned on fine-grained PATs (always) and classic PATs that opted into
+    // expiry. Format: "YYYY-MM-DD HH:MM:SS UTC". Header absent = no expiry.
+    const expiryHeader = res.headers.get('github-authentication-token-expiration') || '';
+
+    // Real authorization check: a valid token isn't enough — confirm it can
+    // actually write to this repo. Without this, non-collaborators would
+    // sign in successfully and only hit a confusing 404 at publish time.
+    const repoRes = await fetch('https://api.github.com/repos/' + GITHUB_OWNER + '/' + GITHUB_REPO, { headers: authHeaders });
+    if (!repoRes.ok) {
+        throw new Error("This token doesn't have access to " + GITHUB_OWNER + '/' + GITHUB_REPO
+            + '. Ask the repo owner to add you as a collaborator.');
+    }
+    const repo = await repoRes.json();
+    if (!repo.permissions || repo.permissions.push !== true) {
+        throw new Error("This token doesn't have write access to " + GITHUB_OWNER + '/' + GITHUB_REPO
+            + '. Ask the repo owner to add you as a collaborator.');
+    }
+
     // persistent === true (default)  → localStorage   (survives browser restart)
     // persistent === false           → sessionStorage (cleared on browser close)
     const store = persistent === false ? sessionStorage : localStorage;
@@ -131,6 +154,7 @@ async function validateAndStorePAT(pat, persistent) {
     store.setItem(LS_KEYS.pat,    pat);
     store.setItem(LS_KEYS.login,  user.login || '');
     store.setItem(LS_KEYS.avatar, user.avatar_url || '');
+    store.setItem(LS_KEYS.expiry, expiryHeader);
     return user;
 }
 
@@ -176,11 +200,32 @@ function renderAuthUI() {
         chip.innerHTML = '<div class="auth-user">'
             + '<img src="' + authEscape(user.avatar) + '" alt="" class="auth-avatar">'
             + '<span class="auth-login">' + authEscape(user.login) + '</span>'
+            + renderExpiryWarning()
             + '<button class="btn-header-action" id="btn-sign-out" title="Sign out">⎋</button>'
             + '</div>';
     } else {
         chip.innerHTML = '<button class="btn-header-action" id="btn-sign-in">🔒 Sign in</button>';
     }
+}
+
+// Returns a warning chip when the stored token expires within 7 days (or has
+// already expired). Empty string when no expiry is known (classic PATs without
+// an expiry date) or when the token has plenty of time left.
+function renderExpiryWarning() {
+    const raw = getTokenExpiry();
+    if (!raw) return '';
+    const when = new Date(raw);
+    if (isNaN(when.getTime())) return '';
+    const msLeft = when.getTime() - Date.now();
+    const dayMs = 86400000;
+    if (msLeft > 7 * dayMs) return '';
+    const tooltip = 'Token expires ' + when.toLocaleString();
+    if (msLeft <= 0) {
+        return '<span class="auth-expiry-warn" title="' + authEscape(tooltip) + '">⚠ expired</span>';
+    }
+    const days = Math.max(1, Math.ceil(msLeft / dayMs));
+    const label = days === 1 ? '1 day' : days + ' days';
+    return '<span class="auth-expiry-warn" title="' + authEscape(tooltip) + '">⚠ expires in ' + label + '</span>';
 }
 
 // ─── Modal handling ──────────────────────────────────────────────────────────
